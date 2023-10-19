@@ -12,7 +12,7 @@ db = firestore.client()
 
 @app.route("/")
 def index():
-    return "Virtual Pet Calendar"
+    return render_template("index.html")
 
 
 @app.route("/")
