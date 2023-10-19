@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, redirect, url_for, render_template
 from firebase_admin import credentials, firestore, initialize_app, db
 
 # Initialize Flask app
@@ -9,6 +9,16 @@ app = Flask(__name__)
 default_app = initialize_app()
 db = firestore.client()
 
+
 @app.route("/")
 def index():
     return "Virtual Pet Calendar"
+
+
+@app.route("/")
+def hello_world():
+    return render_template("hello.html", content="virtual pet calendar")
+
+
+if __name__ == "__main__":
+    app.run()
