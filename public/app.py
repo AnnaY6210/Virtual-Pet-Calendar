@@ -20,5 +20,10 @@ def hello_world():
     return render_template("hello.html", content="virtual pet calendar")
 
 
+@app.route("/shop")
+def shop():
+    return render_template("shop.html")
+
+
 if __name__ == "__main__":
     app.run()
