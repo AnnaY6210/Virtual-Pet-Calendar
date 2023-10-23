@@ -15,9 +15,9 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/")
-def hello_world():
-    return render_template("hello.html", content="virtual pet calendar")
+@app.route("/calendar")
+def calendar():
+    return render_template("calendar.html", content="virtual pet calendar")
 
 
 if __name__ == "__main__":
