@@ -9,13 +9,11 @@ app = Flask(__name__)
 default_app = initialize_app()
 db = firestore.client()
 
-
 @app.route("/")
 def index():
     return render_template("index.html")
 
-
-@app.route("/")
+@app.route("/hello_world")
 def hello_world():
     return render_template("hello.html", content="virtual pet calendar")
 
