@@ -1,10 +1,6 @@
 {% extends "index.html" %}
 {% block content %}
-<h1 class="title is-1">Shop</h1>
 
-<div class="column is-half">
-  <textarea class="textarea has-fixed-size" placeholder="Search" rows="1"></textarea>
-</div>
 
 <div hidden>
   <div id="row" class="columns">
@@ -29,7 +25,13 @@
   </div>
 </div>
 
-<div id="start"></div>
+<div class="section">
+  <h1 class="title is-1">Shop</h1>
+  <div class="column is-half">
+    <textarea class="textarea has-fixed-size" placeholder="Search" rows="1"></textarea>
+  </div>
+  <div id="start"></div>
+</div>
 
 <script src="../static/shop.js"></script>
 {% endblock %}
