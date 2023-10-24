@@ -17,6 +17,9 @@ def index():
 def calendar():
     return render_template("calendar.html", content="virtual pet calendar")
 
+@app.route("/inv")
+def inventory():
+    return render_template("inventory.html")
 
 
 if __name__ == "__main__":
