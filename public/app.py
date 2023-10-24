@@ -22,6 +22,5 @@ def inventory():
     return render_template("inventory.html")
 
 
-
 if __name__ == "__main__":
     app.run()
