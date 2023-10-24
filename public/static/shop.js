@@ -2,7 +2,8 @@
 var items = [];
 
 // Test items
-for (let i = 0; i < 23; i++) {
+
+for (let i = 0; i < 24; i++) {
     items.push(["Item " + String(i), "https://bulma.io/images/placeholders/640x320.png", "Description " + String(i)]);
 }
 

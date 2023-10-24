@@ -22,5 +22,10 @@ def inventory():
     return render_template("inventory.html")
 
 
+@app.route("/shop")
+def shop():
+    return render_template("shop.html")
+
+
 if __name__ == "__main__":
     app.run()
