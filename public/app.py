@@ -22,8 +22,24 @@ def index():
         return redirect(url_for("oauth2callback"))
     http_auth = credentials.authorize(httplib2.Http())
     service = discovery.build("calendar", "v3", http=http_auth)
-    calendar = service.calendars().get(calendarId="primary").execute()
-    return render_template("index.html", content=calendar["summary"])
+    # calendar = service.calendars().get(calendarId="primary").execute()
+    page_token = None
+    eventList = []
+
+    # Get all events from calendar
+    while True:
+        events = (
+            service.events()
+            .instances(calendarId="primary", eventId="eventId", pageToken=page_token)
+            .execute()
+        )
+        for event in events["items"]:
+            eventList.append(event["summary"])
+        page_token = events.get("nextPageToken")
+        if not page_token:
+            break
+
+    return render_template("index.html", content=eventList)
 
 
 # Begin oauth callback route
