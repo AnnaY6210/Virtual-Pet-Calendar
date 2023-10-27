@@ -28,7 +28,7 @@ def index():
 def oauth2callback():
     flow = client.flow_from_clientsecrets(
         "../client_secrets.json",
-        scope="https://www.googleapis.com/auth/calendar",
+        scope=["https://www.googleapis.com/auth/tasks", "https://www.googleapis.com/auth/calendar"],
         redirect_uri=url_for("oauth2callback", _external=True),
     )
     if "code" not in request.args:
@@ -49,27 +49,24 @@ def calendar():
     if credentials.access_token_expired:
         return redirect(url_for("oauth2callback"))
     http_auth = credentials.authorize(httplib2.Http())
-    service = discovery.build("calendar", "v3", http=http_auth)
 
     # get all events from calendar
-    target_date = datetime.datetime(2023, 10, 25)  # Change to your desired date
+    target_date = datetime.datetime(2023, 10, 27)  # Change to your desired date
 
     # Define the start and end times for the target day
     start_time = target_date.replace(hour=0, minute=0, second=0).isoformat() + "Z"
     end_time = target_date.replace(hour=23, minute=59, second=59).isoformat() + "Z"
 
     # Retrieve events for the target day
-    events_result = (
-        service.events()
-        .list(
+    eventservice = discovery.build("calendar", "v3", http=http_auth)
+    
+    events_result = eventservice.events().list(
             calendarId="primary",
             timeMin=start_time,
             timeMax=end_time,
             singleEvents=True,
             orderBy="startTime",
-        )
-        .execute()
-    )
+        ).execute()
 
     events = events_result.get("items", [])
     eventList = []
@@ -89,7 +86,19 @@ def calendar():
             start_formatted = start_datetime.strftime("%H:%M")
             end_formatted = end_datetime.strftime("%H:%M")
             eventList.append(f'{start_formatted} - {end_formatted}: {event["summary"]}')
-    return render_template("calendar.html", content=eventList)
+
+    taskservice = discovery.build("tasks", "v1", http=http_auth)
+    results = taskservice.tasklists().list().execute()
+    tasklists = results.get("items", [])
+    displayTasks = []
+    for item in tasklists:
+        tasks = taskservice.tasks().list(tasklist = item['id']).execute()
+        tlist = tasks.get("items", [])
+        for task in tlist:
+            displayTasks.append('{} ({})'.format(task['title'], task['due']))
+
+
+    return render_template("calendar.html", content=displayTasks+eventList)
 
 
 @app.route("/inv")
