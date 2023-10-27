@@ -52,7 +52,7 @@ def calendar():
     service = discovery.build("calendar", "v3", http=http_auth)
 
     # get all events from calendar
-    target_date = datetime.datetime(2023, 10, 25)  # Change to your desired date
+    target_date = datetime.datetime.now()
 
     # Define the start and end times for the target day
     start_time = target_date.replace(hour=0, minute=0, second=0).isoformat() + "Z"
