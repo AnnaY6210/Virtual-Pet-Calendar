@@ -9,7 +9,9 @@
     "rewrites": [
       {
         "source": "**",
-        "destination": "/templates/index.html"
+        "run": {
+          "serviceId": "flask"
+        }
       }
     ]
   }
