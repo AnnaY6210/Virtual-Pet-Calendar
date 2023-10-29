@@ -51,7 +51,7 @@ def calendar():
     http_auth = credentials.authorize(httplib2.Http())
 
     # get all events from calendar
-    target_date = datetime.datetime(2023, 10, 27)  # Change to your desired date
+    target_date = datetime.datetime.now()  # Change to your desired date
 
     # Define the start and end times for the target day
     start_time = target_date.replace(hour=0, minute=0, second=0).isoformat() + "Z"
@@ -87,18 +87,27 @@ def calendar():
             end_formatted = end_datetime.strftime("%H:%M")
             eventList.append(f'{start_formatted} - {end_formatted}: {event["summary"]}')
 
+    
+    today = datetime.datetime.now()
+    prev_login = datetime.datetime(2023, 10, 27) # TEMPORARY LINE
+
     taskservice = discovery.build("tasks", "v1", http=http_auth)
     results = taskservice.tasklists().list().execute()
     tasklists = results.get("items", [])
     displayTasks = []
     for item in tasklists:
-        tasks = taskservice.tasks().list(tasklist = item['id']).execute()
-        tlist = tasks.get("items", [])
+        pastTasks = taskservice.tasks().list(tasklist = item['id'], dueMin = prev_login.isoformat() + "Z", dueMax = today.isoformat() + "Z").execute()
+        todayTasks = taskservice.tasks().list(tasklist = item['id'], dueMin = today.isoformat() + "Z", dueMax = (today + datetime.timedelta(days=1)).isoformat() + "Z").execute()
+        
+        tlist = pastTasks.get("items", [])
         for task in tlist:
-            displayTasks.append('{} ({})'.format(task['title'], task['due']))
+            displayTasks.append((task['title'], task['due'], task['status']))
+            
+        tlist = todayTasks.get("items", [])
+        for task in tlist:
+            displayTasks.append((task['title'], task['due'], task['status']))
 
-
-    return render_template("calendar.html", content=displayTasks+eventList)
+    return render_template("calendar.html", content=displayTasks)
 
 
 @app.route("/inv")
