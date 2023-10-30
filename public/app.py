@@ -52,19 +52,22 @@ def calendar():
     service = discovery.build("calendar", "v3", http=http_auth)
 
     # get all events from calendar
-    target_date = datetime.datetime(2023, 10, 25)  # Change to your desired date
+    # target_date = datetime.datetime(2023, 10, 25)  # Change to your desired date
 
     # Define the start and end times for the target day
-    start_time = target_date.replace(hour=0, minute=0, second=0).isoformat() + "Z"
-    end_time = target_date.replace(hour=23, minute=59, second=59).isoformat() + "Z"
+    # start_time = target_date.replace(hour=0, minute=0, second=0).isoformat() + "Z"
+    # end_time = target_date.replace(hour=23, minute=59, second=59).isoformat() + "Z"
 
-    # Retrieve events for the target day
+    now = datetime.datetime.utcnow().isoformat() + "Z"
+
+    # Retrieve events
     events_result = (
         service.events()
         .list(
             calendarId="primary",
-            timeMin=start_time,
-            timeMax=end_time,
+            timeMin=now,
+            # timeMax=end_time,
+            maxResults=10,
             singleEvents=True,
             orderBy="startTime",
         )
@@ -72,11 +75,15 @@ def calendar():
     )
 
     events = events_result.get("items", [])
-    eventList = []
+    
+    # Dict of dates to a list of events for that date
+    dates = {}
+    
     if not events:
-        print("No events found for the specified date.")
+        print("No events found")
     else:
-        print(f"Events for {target_date.date()}:")
+        # print(f"Events for {target_date.date()}:")
+        print("Events")
         for event in events:
             start_time = event["start"].get("dateTime", event["start"].get("date"))
             end_time = event["end"].get("dateTime", event["end"].get("date"))
@@ -88,8 +95,14 @@ def calendar():
             # Format start_time and end_time in a standard format
             start_formatted = start_datetime.strftime("%H:%M")
             end_formatted = end_datetime.strftime("%H:%M")
-            eventList.append(f'{start_formatted} - {end_formatted}: {event["summary"]}')
-    return render_template("calendar.html", content=eventList)
+            date = start_datetime.strftime("%D")
+
+            # Add event info to proper date
+            if (not dates.get(date)):
+                dates[date] = []
+            dates[date].append([event["summary"], start_formatted, end_formatted])
+
+    return render_template("calendar.html", dates=dates)
 
 
 @app.route("/inv")
