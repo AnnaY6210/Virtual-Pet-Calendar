@@ -28,7 +28,7 @@ def index():
 def oauth2callback():
     flow = client.flow_from_clientsecrets(
         "../client_secrets.json",
-        scope="https://www.googleapis.com/auth/calendar",
+        scope=["https://www.googleapis.com/auth/tasks", "https://www.googleapis.com/auth/calendar"],
         redirect_uri=url_for("oauth2callback", _external=True),
     )
     if "code" not in request.args:
@@ -102,7 +102,41 @@ def calendar():
                 dates[date] = []
             dates[date].append([event["summary"], start_formatted, end_formatted])
 
-    return render_template("calendar.html", dates=dates)
+    # Tasks
+    service = discovery.build("tasks", "v1", http=http_auth)
+    results = service.tasklists().list().execute()
+    prev_login = datetime.datetime(2023, 10, 27) # Placeholder Time
+    tasksDates = {}
+    tasklists = results.get("items", [])
+
+    for item in tasklists:
+        pastTasks = service.tasks().list(
+            tasklist = item['id'],
+            dueMin = prev_login.isoformat() + "Z",
+            dueMax = now,
+            showHidden = True
+            ).execute()
+        todayTasks = service.tasks().list(
+            tasklist = item['id'],
+            dueMin = now,
+            dueMax = now,
+            showHidden = True
+            ).execute()
+        
+        tlist = pastTasks.get("items", []) + todayTasks.get("items", [])
+        for task in tlist:
+            date = datetime.datetime.strptime(task["due"], "%Y-%m-%dT%H:%M:%S.%fZ")
+            formattedDate = date.strftime("%D")
+
+            if task["status"] == "completed":
+                status = "Completed"
+            else:
+                status = "Incomplete"
+
+            if (not tasksDates.get(formattedDate)):
+                tasksDates[formattedDate] = []
+            tasksDates[formattedDate].append([task["title"], status])
+    return render_template("calendar.html", dates=dates, tasksDates=tasksDates)
 
 
 @app.route("/inv")
@@ -116,4 +150,4 @@ def shop():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host='0.0.0.0',port=int(os.environ.get('PORT', 8080)))
+    app.run()
