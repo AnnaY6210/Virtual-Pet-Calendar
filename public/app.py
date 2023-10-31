@@ -49,31 +49,41 @@ def calendar():
     if credentials.access_token_expired:
         return redirect(url_for("oauth2callback"))
     http_auth = credentials.authorize(httplib2.Http())
+    service = discovery.build("calendar", "v3", http=http_auth)
 
     # get all events from calendar
-    target_date = datetime.datetime.now()  # Change to your desired date
+    # target_date = datetime.datetime(2023, 10, 25)  # Change to your desired date
 
     # Define the start and end times for the target day
-    start_time = target_date.replace(hour=0, minute=0, second=0).isoformat() + "Z"
-    end_time = target_date.replace(hour=23, minute=59, second=59).isoformat() + "Z"
+    # start_time = target_date.replace(hour=0, minute=0, second=0).isoformat() + "Z"
+    # end_time = target_date.replace(hour=23, minute=59, second=59).isoformat() + "Z"
 
-    # Retrieve events for the target day
-    eventservice = discovery.build("calendar", "v3", http=http_auth)
-    
-    events_result = eventservice.events().list(
+    now = datetime.datetime.utcnow().isoformat() + "Z"
+
+    # Retrieve events
+    events_result = (
+        service.events()
+        .list(
             calendarId="primary",
-            timeMin=start_time,
-            timeMax=end_time,
+            timeMin=now,
+            # timeMax=end_time,
+            maxResults=10,
             singleEvents=True,
             orderBy="startTime",
-        ).execute()
+        )
+        .execute()
+    )
 
     events = events_result.get("items", [])
-    eventList = []
+    
+    # Dict of dates to a list of events for that date
+    dates = {}
+    
     if not events:
-        print("No events found for the specified date.")
+        print("No events found")
     else:
-        print(f"Events for {target_date.date()}:")
+        # print(f"Events for {target_date.date()}:")
+        print("Events")
         for event in events:
             start_time = event["start"].get("dateTime", event["start"].get("date"))
             end_time = event["end"].get("dateTime", event["end"].get("date"))
@@ -85,29 +95,48 @@ def calendar():
             # Format start_time and end_time in a standard format
             start_formatted = start_datetime.strftime("%H:%M")
             end_formatted = end_datetime.strftime("%H:%M")
-            eventList.append(f'{start_formatted} - {end_formatted}: {event["summary"]}')
+            date = start_datetime.strftime("%D")
 
-    
-    today = datetime.datetime.now()
-    prev_login = datetime.datetime(2023, 10, 27) # TEMPORARY LINE
+            # Add event info to proper date
+            if (not dates.get(date)):
+                dates[date] = []
+            dates[date].append([event["summary"], start_formatted, end_formatted])
 
-    taskservice = discovery.build("tasks", "v1", http=http_auth)
-    results = taskservice.tasklists().list().execute()
+    # Tasks
+    service = discovery.build("tasks", "v1", http=http_auth)
+    results = service.tasklists().list().execute()
+    prev_login = datetime.datetime(2023, 10, 27) # Placeholder Time
+    tasksDates = {}
     tasklists = results.get("items", [])
-    displayTasks = []
-    for item in tasklists:
-        pastTasks = taskservice.tasks().list(tasklist = item['id'], dueMin = prev_login.isoformat() + "Z", dueMax = today.isoformat() + "Z").execute()
-        todayTasks = taskservice.tasks().list(tasklist = item['id'], dueMin = today.isoformat() + "Z", dueMax = (today + datetime.timedelta(days=1)).isoformat() + "Z").execute()
-        
-        tlist = pastTasks.get("items", [])
-        for task in tlist:
-            displayTasks.append((task['title'], task['due'], task['status']))
-            
-        tlist = todayTasks.get("items", [])
-        for task in tlist:
-            displayTasks.append((task['title'], task['due'], task['status']))
 
-    return render_template("calendar.html", content=displayTasks)
+    for item in tasklists:
+        pastTasks = service.tasks().list(
+            tasklist = item['id'],
+            dueMin = prev_login.isoformat() + "Z",
+            dueMax = now,
+            showHidden = True
+            ).execute()
+        todayTasks = service.tasks().list(
+            tasklist = item['id'],
+            dueMin = now,
+            dueMax = now,
+            showHidden = True
+            ).execute()
+        
+        tlist = pastTasks.get("items", []) + todayTasks.get("items", [])
+        for task in tlist:
+            date = datetime.datetime.strptime(task["due"], "%Y-%m-%dT%H:%M:%S.%fZ")
+            formattedDate = date.strftime("%D")
+
+            if task["status"] == "completed":
+                status = "Completed"
+            else:
+                status = "Incomplete"
+
+            if (not tasksDates.get(formattedDate)):
+                tasksDates[formattedDate] = []
+            tasksDates[formattedDate].append([task["title"], status])
+    return render_template("calendar.html", dates=dates, tasksDates=tasksDates)
 
 
 @app.route("/inv")
@@ -121,4 +150,4 @@ def shop():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host='0.0.0.0',port=int(os.environ.get('PORT', 8080)))
+    app.run()
