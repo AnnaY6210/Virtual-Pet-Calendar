@@ -1,0 +1,56 @@
+{% extends "index.html" %} {% block content %}
+<section class="section">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-half">
+        <h1 class="title has-text-centered">Sign In</h1>
+        <form action="/register" method="POST">
+          <div class="field">
+            <label class="label">Name</label>
+            <div class="control">
+              <input
+                class="input"
+                type="text"
+                name="name"
+                placeholder="Enter your name"
+                required
+              />
+            </div>
+          </div>
+          <div class="field">
+            <label class="label">Email</label>
+            <div class="control">
+              <input
+                class="input"
+                type="email"
+                name="email"
+                placeholder="Enter your email"
+                required
+              />
+            </div>
+          </div>
+          <div class="field">
+            <label class="label">Password</label>
+            <div class="control">
+              <input
+                class="input"
+                type="password"
+                name="password"
+                placeholder="Enter your password"
+                required
+              />
+            </div>
+          </div>
+          <div class="field">
+            <div class="control">
+              <button class="button is-primary is-fullwidth" type="submit">
+                Sign In
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
