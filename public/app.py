@@ -1,4 +1,4 @@
-import os, flask, sys, httplib2, datetime
+import os, flask, sys, httplib2, datetime, pyrebase
 from flask import Flask, request, jsonify, redirect, url_for, render_template, session
 from firebase_admin import credentials, firestore, initialize_app, db
 from oauth2client import client
@@ -11,6 +11,22 @@ app.secret_key = "password"
 # Initialize Firestore DB
 default_app = initialize_app()
 db = firestore.client()
+config = {
+    "apiKey": "AIzaSyAc_veZWFlMCqBp988qL2Qn87oFudB9ylk",
+    "authDomain": "virtual-pet-calendar.firebaseapp.com",
+    "databaseURL": "https://virtual-pet-calendar-default-rtdb.firebaseio.com",
+    "storageBucket": "virtual-pet-calendar.appspot.com",
+}
+
+firebase = pyrebase.initialize_app(config)
+
+db = firebase.database()
+# db.child("users").child("Morty")
+# data = {"name": "Mortimer 'Morty' Smith"}
+# db.child("users").push(data)
+auth = firebase.auth()
+
+person = {"is_logged_in": False, "name": "", "email": "", "uid": ""}
 
 
 @app.route("/")
@@ -28,7 +44,10 @@ def index():
 def oauth2callback():
     flow = client.flow_from_clientsecrets(
         "../client_secrets.json",
-        scope=["https://www.googleapis.com/auth/tasks", "https://www.googleapis.com/auth/calendar"],
+        scope=[
+            "https://www.googleapis.com/auth/tasks",
+            "https://www.googleapis.com/auth/calendar",
+        ],
         redirect_uri=url_for("oauth2callback", _external=True),
     )
     if "code" not in request.args:
@@ -75,10 +94,10 @@ def calendar():
     )
 
     events = events_result.get("items", [])
-    
+
     # Dict of dates to a list of events for that date
     dates = {}
-    
+
     if not events:
         print("No events found")
     else:
@@ -98,31 +117,34 @@ def calendar():
             date = start_datetime.strftime("%D")
 
             # Add event info to proper date
-            if (not dates.get(date)):
+            if not dates.get(date):
                 dates[date] = []
             dates[date].append([event["summary"], start_formatted, end_formatted])
 
     # Tasks
     service = discovery.build("tasks", "v1", http=http_auth)
     results = service.tasklists().list().execute()
-    prev_login = datetime.datetime(2023, 10, 27) # Placeholder Time
+    prev_login = datetime.datetime(2023, 10, 27)  # Placeholder Time
     tasksDates = {}
     tasklists = results.get("items", [])
 
     for item in tasklists:
-        pastTasks = service.tasks().list(
-            tasklist = item['id'],
-            dueMin = prev_login.isoformat() + "Z",
-            dueMax = now,
-            showHidden = True
-            ).execute()
-        todayTasks = service.tasks().list(
-            tasklist = item['id'],
-            dueMin = now,
-            dueMax = now,
-            showHidden = True
-            ).execute()
-        
+        pastTasks = (
+            service.tasks()
+            .list(
+                tasklist=item["id"],
+                dueMin=prev_login.isoformat() + "Z",
+                dueMax=now,
+                showHidden=True,
+            )
+            .execute()
+        )
+        todayTasks = (
+            service.tasks()
+            .list(tasklist=item["id"], dueMin=now, dueMax=now, showHidden=True)
+            .execute()
+        )
+
         tlist = pastTasks.get("items", []) + todayTasks.get("items", [])
         for task in tlist:
             date = datetime.datetime.strptime(task["due"], "%Y-%m-%dT%H:%M:%S.%fZ")
@@ -133,7 +155,7 @@ def calendar():
             else:
                 status = "Incomplete"
 
-            if (not tasksDates.get(formattedDate)):
+            if not tasksDates.get(formattedDate):
                 tasksDates[formattedDate] = []
             tasksDates[formattedDate].append([task["title"], status])
     return render_template("calendar.html", dates=dates, tasksDates=tasksDates)
@@ -147,6 +169,82 @@ def inventory():
 @app.route("/shop")
 def shop():
     return render_template("shop.html")
+
+
+@app.route("/login")
+def login():
+    return render_template("login.html")
+
+
+# If someone clicks on login, they are redirected to /result
+@app.route("/result", methods=["POST", "GET"])
+@app.route("/result", methods=["POST", "GET"])
+def result():
+    if request.method == "POST":  # Only if data has been posted
+        result = request.form  # Get the data
+        email = result["email"]
+        password = result["password"]
+        try:
+            # Try signing in the user with the given information
+            user = auth.sign_in_with_email_and_password(email, password)
+            # Insert the user data in the session object
+            session["person"] = {
+                "is_logged_in": True,
+                "email": user["email"],
+                "uid": user["localId"],
+                # Get the name of the user
+                "name": db.child("users").child(user["localId"]).get().val()["name"],
+            }
+            # Redirect to welcome page
+            return redirect(url_for("index"))
+        except:
+            # If there is any error, redirect back to login
+            return redirect(url_for("login"))
+    else:
+        if session.get("person") and session["person"]["is_logged_in"]:
+            return redirect(url_for("index"))
+        else:
+            return redirect(url_for("login"))
+
+
+@app.route("/signup")
+def signup():
+    return render_template("signup.html")
+
+
+@app.route("/register", methods=["POST", "GET"])
+def register():
+    if request.method == "POST":  # Only listen to POST
+        result = request.form  # Get the data submitted
+        email = result["email"]
+        password = result["password"]
+        name = result["name"]
+        try:
+            # Try creating the user account using the provided data
+            auth.create_user_with_email_and_password(email, password)
+            # Login the user
+            user = auth.sign_in_with_email_and_password(email, password)
+            session["person"] = {
+                "is_logged_in": True,
+                "email": user["email"],
+                "uid": user["localId"],
+                # Get the name of the user
+                "name": name,
+            }
+            # Append data to the firebase realtime database
+            data = {"name": name, "email": email}
+            db.child("users").child(person["uid"]).set(data)
+            # Go to welcome page
+            return redirect(url_for("index"))
+        except:
+            # If there is any error, redirect to register
+            return redirect(url_for("register"))
+
+    else:
+        if session.get("person") and session["person"]["is_logged_in"]:
+            return redirect(url_for("index"))
+        else:
+            return redirect(url_for("register"))
 
 
 if __name__ == "__main__":
