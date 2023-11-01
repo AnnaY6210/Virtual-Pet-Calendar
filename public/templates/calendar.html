@@ -1,8 +1,47 @@
 {% extends "index.html" %} {% block content %}
-<h1>Events for the Day</h1>
-<ul id="event-list">
-  {% for event in eventList %}
-  <li>{{ event}}</li>
+
+<div class="section">
+  <div class="block">
+    <h1 class="title is-1">Events</h1>
+  </div>
+  {% for date, events in dates.items() %}
+  <h1 class="subtitle">{{ date }}</h1>
+  <div class="columns">
+    {% for event in events %}
+    <div class="column is-2">
+      <article class="message is-info">
+        <div class="message-header">
+          <p>{{ event[0] }}</p>
+        </div>
+        <div class="message-body">
+          {{ event[1] }} - {{ event[2] }}
+        </div>
+      </article>
+    </div>
+    {% endfor %}
+  </div>
   {% endfor %}
-</ul>
+
+  <div class="block">
+    <h1 class="title is-1">Tasks</h1>
+  </div>
+  {% for date, tasks in tasksDates.items() %}
+  <h1 class="subtitle">{{ date }}</h1>
+  <div class="columns">
+    {% for task in tasks %}
+    <div class="column is-2">
+      <article class="message is-info">
+        <div class="message-header">
+          <p>{{ task[0] }}</p>
+        </div>
+        <div class="message-body">
+          {{ task[1] }}
+        </div>
+      </article>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+</div>
 {% endblock %}
