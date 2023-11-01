@@ -12,7 +12,7 @@ app.secret_key = "password"
 default_app = initialize_app()
 db = firestore.client()
 config = {
-    "apiKey": "AIzaSyAc_veZWFlMCqBp988qL2Qn87oFudB9ylk",
+    "apiKey": "ADD API KEY HERE",
     "authDomain": "virtual-pet-calendar.firebaseapp.com",
     "databaseURL": "https://virtual-pet-calendar-default-rtdb.firebaseio.com",
     "storageBucket": "virtual-pet-calendar.appspot.com",
