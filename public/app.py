@@ -12,7 +12,7 @@ app.secret_key = "password"
 default_app = initialize_app()
 db = firestore.client()
 config = {
-    "apiKey": "ADD API KEY HERE",
+    "apiKey": "AIzaSyD-gV3V7Gn1KAPrZSI64H2fDVz2xR4NkuM",
     "authDomain": "virtual-pet-calendar.firebaseapp.com",
     "databaseURL": "https://virtual-pet-calendar-default-rtdb.firebaseio.com",
     "storageBucket": "virtual-pet-calendar.appspot.com",
@@ -31,6 +31,8 @@ person = {"is_logged_in": False, "name": "", "email": "", "uid": ""}
 
 @app.route("/")
 def index():
+    if not session["person"]["is_logged_in"]:
+        return redirect(url_for("login"))
     if "credentials" not in session:
         return redirect(url_for("oauth2callback"))
     credentials = client.OAuth2Credentials.from_json(session["credentials"])
@@ -178,7 +180,6 @@ def login():
 
 # If someone clicks on login, they are redirected to /result
 @app.route("/result", methods=["POST", "GET"])
-@app.route("/result", methods=["POST", "GET"])
 def result():
     if request.method == "POST":  # Only if data has been posted
         result = request.form  # Get the data
@@ -195,6 +196,7 @@ def result():
                 # Get the name of the user
                 "name": db.child("users").child(user["localId"]).get().val()["name"],
             }
+
             # Redirect to welcome page
             return redirect(url_for("index"))
         except:
