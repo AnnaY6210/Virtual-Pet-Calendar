@@ -23,7 +23,10 @@
   {% endfor %}
 
   <div class="block">
-    <h1 class="title is-1">Tasks</h1>
+    <h1 class="title is-1">
+      Tasks
+      <button class="button is-primary claimtasks">Claim Rewards [Last Claimed: {{prev_claim}}]</button>
+    </h1>
   </div>
   {% for date, tasks in tasksDates.items() %}
   <h1 class="subtitle">{{ date }}</h1>
@@ -44,4 +47,5 @@
   {% endfor %}
 
 </div>
+<script src="{{url_for('static', filename='calendar.js')}}"></script>
 {% endblock %}
