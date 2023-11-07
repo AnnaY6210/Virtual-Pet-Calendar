@@ -160,4 +160,4 @@ cython_debug/
 #.idea/
 
 #EXTRA
-client_secret.json
+client_secrets.json
