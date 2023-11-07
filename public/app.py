@@ -2,6 +2,7 @@ import os, flask, sys, httplib2, datetime, pyrebase
 from flask import Flask, request, jsonify, redirect, url_for, render_template, session
 from firebase_admin import credentials, firestore, initialize_app, db
 from oauth2client import client
+from operator import itemgetter
 from googleapiclient import discovery
 
 # Initialize Flask app
@@ -218,7 +219,26 @@ def inventory():
 @app.route("/shop")
 def shop():
     current_balance = db.child("users").child("test_user_id").get().val()["balance"]
-    return render_template("shop.html", balance = current_balance)
+    itemData = db.child("items").get().val()
+    items = []
+    for id, item in itemData.items():
+        items.append(item)
+    
+    # Test items
+    for i in range(3):
+        items.append({"name": "Test Item " + str(i), "image": "https://bulma.io/images/placeholders/640x320.png",
+                      "description": "Description " + str(i), "price": 50*i})
+    
+    items.sort(key=itemgetter("price"))
+    return render_template("shop.html", balance = current_balance, items=items, zip=zip)
+
+# Redirected here when a buy button is clicked
+@app.route("/buy", methods=["POST"])
+def buy():
+    spent = request.form["price"]
+    item = request.form["name"]
+    # Update user's currency and quanitity of that item
+    return redirect(url_for("shop"))
 
 
 @app.route("/login")
