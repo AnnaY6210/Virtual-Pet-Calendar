@@ -19,12 +19,7 @@
   <body>
     {% include "navbar.html" %} {% block content %} {% endblock %}
 
-    <h1>Virtual Pet Calendar</h1>
-    <p>this is temporary</p>
     <p>{{content}}</p>
-    <button id="login-btn"><i class="fa fa-google"></i></button>
-    <script type="module" src="static/firebase-init.js"></script>
-    <script type="module" src="static/auth.js"></script>
     <script defer src="static/index.js"></script>
   </body>
 </html>

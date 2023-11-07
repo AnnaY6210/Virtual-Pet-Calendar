@@ -1,7 +1,7 @@
 FROM python:3.10
 
 # dependencies
-RUN pip install Flask gunicorn firebase_admin
+RUN pip install Flask gunicorn firebase firebase-admin httplib2 datetime pyrebase4 oauth2client
 
 COPY public/ app/
 WORKDIR /app
