@@ -235,8 +235,11 @@ def shop():
 # Redirected here when a buy button is clicked
 @app.route("/buy", methods=["POST"])
 def buy():
-    spent = request.form["price"]
+    spent = int(request.form["price"])
     item = request.form["name"]
+    current_balance = db.child("users").child("test_user_id").get().val()["balance"]
+    if current_balance >= spent:
+        db.child("users").child("test_user_id").update({"balance": current_balance - spent})
     # Update user's currency and quanitity of that item
     return redirect(url_for("shop"))
 
