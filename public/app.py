@@ -121,9 +121,8 @@ def calendar():
     service = discovery.build("tasks", "v1", http=http_auth)
     results = service.tasklists().list().execute()
 
-    # TODO: Access current user's login
-    prev_claimstr = db.child("users").child(session["person"]["uid"]).get().val()["prev_claim"]
-    prev_claim = datetime.datetime.fromisoformat(prev_claimstr)
+    prev_claim_str = db.child("users").child(session["person"]["uid"]).get().val()["prev_claim"]
+    prev_claim_date = datetime.datetime.fromisoformat(prev_claim_str)
     tasksDates = {}
     tasklists = results.get("items", [])
     current_day = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)).isoformat() + "Z"
@@ -142,7 +141,6 @@ def calendar():
             .execute()
         )
 
-        # TODO: Access current user's balance
         current_balance = db.child("users").child(session["person"]["uid"]).get().val()["balance"]
         # Always display at least some tasks
         displayed_tasks = task_display.get("items", [])
@@ -163,7 +161,7 @@ def calendar():
                             dates=dates, 
                             tasksDates=dict(sorted(tasksDates.items(), reverse = True)), 
                             balance = current_balance,
-                            prev_claim = prev_claim.strftime("%D"))
+                            prev_claim = prev_claim_date.strftime("%D"))
 
 @app.route('/claim_tasks')
 def claim_tasks():
@@ -203,7 +201,7 @@ def claim_tasks():
                 due_date = datetime.datetime.strptime(task["due"], "%Y-%m-%dT%H:%M:%S.%fZ")
                 if (completion_date - due_date).days < 1:
                     money_gained += 100
-    # TODO: Update values for current user
+    # Update values for current user
     db.child("users").child(session["person"]["uid"]).update({"balance": current_balance + money_gained})
     db.child("users").child(session["person"]["uid"]).update({"prev_claim": current_day})
     return ('', 204)
