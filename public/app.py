@@ -28,7 +28,6 @@ auth = firebase.auth()
 
 person = {"is_logged_in": False, "name": "", "email": "", "uid": ""}
 
-
 @app.route("/")
 def index():
     if "person" not in session or not session["person"]["is_logged_in"]:
@@ -64,6 +63,8 @@ def oauth2callback():
 
 @app.route("/calendar")
 def calendar():
+    if "person" not in session or not session["person"]["is_logged_in"]:
+        return redirect(url_for("login"))
     if "credentials" not in session:
         return redirect(url_for("oauth2callback"))
     credentials = client.OAuth2Credentials.from_json(session["credentials"])
@@ -71,10 +72,6 @@ def calendar():
         return redirect(url_for("oauth2callback"))
     http_auth = credentials.authorize(httplib2.Http())
     service = discovery.build("calendar", "v3", http=http_auth)
-
-    # Code for test user generation
-    # data = {"name": "Mortimer 'Morty' Smith", "balance": 0, "prev_claim":"2023-10-27T19:01:04.425925"}
-    # print(db.child("users").child("test_user_id").set(data))
 
     now = datetime.datetime.utcnow().isoformat() + "Z"
 
@@ -124,12 +121,11 @@ def calendar():
     service = discovery.build("tasks", "v1", http=http_auth)
     results = service.tasklists().list().execute()
 
-    # TODO: Access current user's login
-    prev_claimstr = db.child("users").child("test_user_id").get().val()["prev_claim"]
-    prev_claim = datetime.datetime.fromisoformat(prev_claimstr)
+    prev_claim_str = db.child("users").child(session["person"]["uid"]).get().val()["prev_claim"]
+    prev_claim_date = datetime.datetime.fromisoformat(prev_claim_str)
     tasksDates = {}
     tasklists = results.get("items", [])
-    tmrw = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)).isoformat() + "Z"
+    current_day = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)).isoformat() + "Z"
     display_min = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(days=10)).isoformat() + "Z"
 
     for item in tasklists:
@@ -138,15 +134,14 @@ def calendar():
             .list(
                 tasklist=item["id"],
                 dueMin=display_min,
-                dueMax=tmrw,
+                dueMax=current_day,
                 maxResults=10,
                 showHidden=True,
             )
             .execute()
         )
 
-        # TODO: Access current user's balance
-        current_balance = db.child("users").child("test_user_id").get().val()["balance"]
+        current_balance = db.child("users").child(session["person"]["uid"]).get().val()["balance"]
         # Always display at least some tasks
         displayed_tasks = task_display.get("items", [])
         for task in displayed_tasks:
@@ -166,10 +161,12 @@ def calendar():
                             dates=dates, 
                             tasksDates=dict(sorted(tasksDates.items(), reverse = True)), 
                             balance = current_balance,
-                            prev_claim = prev_claim.strftime("%D"))
+                            prev_claim = prev_claim_date.strftime("%D"))
 
 @app.route('/claim_tasks')
 def claim_tasks():
+    if "person" not in session or not session["person"]["is_logged_in"]:
+        return redirect(url_for("login"))
     if "credentials" not in session:
         return redirect(url_for("oauth2callback"))
     credentials = client.OAuth2Credentials.from_json(session["credentials"])
@@ -180,45 +177,49 @@ def claim_tasks():
     results = service.tasklists().list().execute()
     tasklists = results.get("items", [])
 
-    today = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)).isoformat()
-    prev_claimstr = db.child("users").child("test_user_id").get().val()["prev_claim"]
+    current_day = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)).isoformat()
+    prev_claim = db.child("users").child(session["person"]["uid"]).get().val()["prev_claim"]
     money_gained = 0
+    current_balance = db.child("users").child(session["person"]["uid"]).get().val()["balance"]
+
+    # Calculate money gained for task completions
     for item in tasklists:
         past_completed_tasks = (
             service.tasks()
             .list(
                 tasklist=item["id"],
-                dueMin=prev_claimstr + "Z",
-                dueMax=today + "Z",
+                dueMin=prev_claim + "Z",
+                dueMax=current_day + "Z",
                 showHidden=True,
             )
             .execute()
         )
         task_list = past_completed_tasks.get("items", [])
-        # TODO: Get current user's balance
-        current_balance = db.child("users").child("test_user_id").get().val()["balance"]
         for task in task_list:
-            date = datetime.datetime.strptime(task["due"], "%Y-%m-%dT%H:%M:%S.%fZ")
             if task["status"] == "completed":
                 completion_date = datetime.datetime.strptime(task["completed"], "%Y-%m-%dT%H:%M:%S.%fZ")
                 due_date = datetime.datetime.strptime(task["due"], "%Y-%m-%dT%H:%M:%S.%fZ")
                 if (completion_date - due_date).days < 1:
                     money_gained += 100
-    # TODO: Update values for current user
-    db.child("users").child("test_user_id").update({"balance": current_balance + money_gained})
-    db.child("users").child("test_user_id").update({"prev_claim": today})
+    # Update values for current user
+    db.child("users").child(session["person"]["uid"]).update({"balance": current_balance + money_gained})
+    db.child("users").child(session["person"]["uid"]).update({"prev_claim": current_day})
     return ('', 204)
 
 
 @app.route("/inv")
 def inventory():
-    current_balance = db.child("users").child("test_user_id").get().val()["balance"]
+    if "person" not in session or not session["person"]["is_logged_in"]:
+        return redirect(url_for("login"))
+    current_balance = db.child("users").child(session["person"]["uid"]).get().val()["balance"]
     return render_template("inventory.html", balance = current_balance)
 
 
 @app.route("/shop")
 def shop():
-    current_balance = db.child("users").child("test_user_id").get().val()["balance"]
+    if "person" not in session or not session["person"]["is_logged_in"]:
+        return redirect(url_for("login"))
+    current_balance = db.child("users").child(session["person"]["uid"]).get().val()["balance"]
     itemData = db.child("items").get().val()
     items = []
     for id, item in itemData.items():
@@ -235,8 +236,13 @@ def shop():
 # Redirected here when a buy button is clicked
 @app.route("/buy", methods=["POST"])
 def buy():
-    spent = request.form["price"]
+    if "person" not in session or not session["person"]["is_logged_in"]:
+        return redirect(url_for("login"))
+    spent = int(request.form["price"])
     item = request.form["name"]
+    current_balance = db.child("users").child(session["person"]["uid"]).get().val()["balance"]
+    if current_balance >= spent:
+        db.child("users").child(session["person"]["uid"]).update({"balance": current_balance - spent})
     # Update user's currency and quanitity of that item
     return redirect(url_for("shop"))
 
@@ -263,6 +269,8 @@ def result():
                 "uid": user["localId"],
                 # Get the name of the user
                 "name": db.child("users").child(user["localId"]).get().val()["name"],
+                "prev_claim": db.child("users").child(user["localId"]).get().val()["prev_claim"],
+                "balance": db.child("users").child(user["localId"]).get().val()["balance"],
             }
 
             # Redirect to welcome page
@@ -294,17 +302,23 @@ def register():
             auth.create_user_with_email_and_password(email, password)
             # Login the user
             user = auth.sign_in_with_email_and_password(email, password)
+            current_day = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)).isoformat()
             session["person"] = {
                 "is_logged_in": True,
                 "email": user["email"],
                 "uid": user["localId"],
                 # Get the name of the user
                 "name": name,
+                "prev_claim": current_day,
+                "balance": 0,
             }
-            print()
             # Append data to the firebase realtime database
-            data = {"name": name, "email": email}
-            db.child("users").child(person["uid"]).set(data)
+            data = {"name": name, 
+                    "email": email, 
+                    "prev_claim": session["person"]["prev_claim"], 
+                    "balance": session["person"]["balance"]}
+            
+            db.child("users").child(session["person"]["uid"]).set(data)
             # Go to welcome page
             return redirect(url_for("index"))
         except:
