@@ -24,8 +24,8 @@
 
   <div class="block">
     <h1 class="title is-1">
-      Tasks
-      <button class="button is-primary claimtasks">Claim Rewards [Last Claimed: {{prev_claim}}]</button>
+      Task History
+      <button class="button is-primary claimtasks">Claim {{claimable_money}}G [Last Claimed: {{prev_claim}}]</button>
     </h1>
   </div>
   {% for date, tasks in tasksDates.items() %}
@@ -38,7 +38,7 @@
           <p>{{ task[0] }}</p>
         </div>
         <div class="message-body">
-          {{ task[1] }}
+          {{ task[1]|safe}}
         </div>
       </article>
     </div>
