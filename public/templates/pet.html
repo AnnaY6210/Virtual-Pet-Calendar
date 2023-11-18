@@ -1,0 +1,37 @@
+{% block pet %}
+<style>
+    .Pet {
+        width: calc(30px * 6);
+        height: calc(32px * 6);
+        position:relative;
+        overflow: hidden;
+    }
+
+    .pixelart {
+        image-rendering: pixelated;
+    }
+
+    .pet_spritesheet {
+        animation: moveSpritesheet 1s steps(4) infinite;
+        max-width: none;
+        position: absolute;
+        width: calc(100px * 6);
+    }
+
+
+    @keyframes moveSpritesheet {
+        from {
+            transform: translate3d(0px, 0, 0);
+        }
+        to {
+            transform: translate3d(-100%, 0, 0);
+        }
+    }
+</style>
+<div class="box mt-2">
+    <div class="Pet">
+        <img class="pet_spritesheet pixelart" src="../static/img/cat_spritesheet.png" alt="pet">
+    </div>
+    <progress class="progress is-success" value="20" max="100">20%</progress>
+</div>
+{% endblock %}

@@ -30,7 +30,7 @@ person = {"is_logged_in": False, "name": "", "email": "", "uid": ""}
 
 @app.route("/")
 def index():
-    if "person" not in session or not session["person"]["is_logged_in"]:
+    if not session["person"]["is_logged_in"]:
         return redirect(url_for("login"))
     if "credentials" not in session:
         return redirect(url_for("oauth2callback"))

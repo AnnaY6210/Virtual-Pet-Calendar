@@ -17,8 +17,8 @@
     <title>Virtual Pet Calendar</title>
   </head>
   <body>
-    {% include "navbar.html" %} {% block content %} {% endblock %}
-
+    {% include "navbar.html" %}
+    {% include "pet.html" %} {% block content %} {% endblock %}
     <p>{{content}}</p>
     <script defer src="static/index.js"></script>
   </body>
