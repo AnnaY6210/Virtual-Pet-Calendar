@@ -28,6 +28,7 @@ auth = firebase.auth()
 
 person = {"is_logged_in": False, "name": "", "email": "", "uid": ""}
 
+
 @app.route("/")
 def index():
     if "person" not in session or not session["person"]["is_logged_in"]:
@@ -37,7 +38,9 @@ def index():
     credentials = client.OAuth2Credentials.from_json(session["credentials"])
     if credentials.access_token_expired:
         return redirect(url_for("oauth2callback"))
-    return render_template("index.html", content="add cute pet here")
+    return render_template(
+        "index.html", content="add cute pet here", person=session["person"]
+    )
 
 
 # Begin oauth callback route
@@ -151,6 +154,10 @@ def calendar():
             )
             .execute()
         )
+        current_balance = (
+            db.child("users").child(session["person"]["uid"]).get().val()["balance"]
+        )
+        # Always display at least some tasks
         displayed_tasks = task_display.get("items", [])
         for task in displayed_tasks:
             date = datetime.datetime.strptime(task["due"], "%Y-%m-%dT%H:%M:%S.%fZ")
@@ -175,9 +182,10 @@ def calendar():
                             tasksDates=dict(sorted(tasks_dates.items(), reverse = True)), 
                             balance = current_balance,
                             prev_claim = prev_claim_date.strftime("%D"),
-                            claimable_money = claimable_money)
+                            claimable_money = claimable_money,
+                            person=session["person"],)
 
-@app.route('/claim_tasks')
+@app.route("/claim_tasks")
 def claim_tasks():
     if "person" not in session or not session["person"]["is_logged_in"]:
         return redirect(url_for("login"))
@@ -190,7 +198,6 @@ def claim_tasks():
     service = discovery.build("tasks", "v1", http=http_auth)
     results = service.tasklists().list().execute()
     tasklists = results.get("items", [])
-
     current_day = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     money_gained = 0
     current_balance = db.child("users").child(session["person"]["uid"]).get().val()["balance"]
@@ -237,15 +244,21 @@ def calculateMoney(service, tasklist, currency_per_task, prev_claim):
 def inventory():
     if "person" not in session or not session["person"]["is_logged_in"]:
         return redirect(url_for("login"))
-    current_balance = db.child("users").child(session["person"]["uid"]).get().val()["balance"]
-    return render_template("inventory.html", balance = current_balance)
+    current_balance = (
+        db.child("users").child(session["person"]["uid"]).get().val()["balance"]
+    )
+    return render_template(
+        "inventory.html", balance=current_balance, person=session["person"]
+    )
 
 
 @app.route("/shop")
 def shop():
     if "person" not in session or not session["person"]["is_logged_in"]:
         return redirect(url_for("login"))
-    current_balance = db.child("users").child(session["person"]["uid"]).get().val()["balance"]
+    current_balance = (
+        db.child("users").child(session["person"]["uid"]).get().val()["balance"]
+    )
     itemData = db.child("items").get().val()
     itemCount = db.child("users").child(session["person"]["uid"]).child("items").get().val()
     # User has no items
@@ -257,14 +270,21 @@ def shop():
         item["id"] = id
         item["count"] = itemCount.get(id, 0)
         items.append(item)
-    
+
     # Test items
     for i in range(3):
-        items.append({"name": "Test Item " + str(i), "image": "https://bulma.io/images/placeholders/640x320.png",
-                      "description": "Description " + str(i), "price": 50*i})
-    
+        items.append(
+            {
+                "name": "Test Item " + str(i),
+                "image": "https://bulma.io/images/placeholders/640x320.png",
+                "description": "Description " + str(i),
+                "price": 50 * i,
+            }
+        )
+
     items.sort(key=itemgetter("price"))
-    return render_template("shop.html", itemCount=itemCount, balance = current_balance, items=items, zip=zip)
+    return render_template("shop.html", itemCount=itemCount, balance = current_balance, items=items, zip=zip, person=session["person"],)
+
 
 # Redirected here when a buy button is clicked
 @app.route("/buy", methods=["POST"])
@@ -307,8 +327,14 @@ def result():
                 "uid": user["localId"],
                 # Get the name of the user
                 "name": db.child("users").child(user["localId"]).get().val()["name"],
-                "prev_claim": db.child("users").child(user["localId"]).get().val()["prev_claim"],
-                "balance": db.child("users").child(user["localId"]).get().val()["balance"],
+                "prev_claim": db.child("users")
+                .child(user["localId"])
+                .get()
+                .val()["prev_claim"],
+                "balance": db.child("users")
+                .child(user["localId"])
+                .get()
+                .val()["balance"],
             }
 
             # Redirect to welcome page
@@ -340,7 +366,11 @@ def register():
             auth.create_user_with_email_and_password(email, password)
             # Login the user
             user = auth.sign_in_with_email_and_password(email, password)
-            current_day = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)).isoformat()
+            current_day = (
+                datetime.datetime.utcnow().replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                )
+            ).isoformat()
             session["person"] = {
                 "is_logged_in": True,
                 "email": user["email"],
@@ -351,11 +381,13 @@ def register():
                 "balance": 0,
             }
             # Append data to the firebase realtime database
-            data = {"name": name, 
-                    "email": email, 
-                    "prev_claim": session["person"]["prev_claim"], 
-                    "balance": session["person"]["balance"]}
-            
+            data = {
+                "name": name,
+                "email": email,
+                "prev_claim": session["person"]["prev_claim"],
+                "balance": session["person"]["balance"],
+            }
+
             db.child("users").child(session["person"]["uid"]).set(data)
             # Go to welcome page
             return redirect(url_for("index"))
