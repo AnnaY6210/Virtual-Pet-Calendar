@@ -20,12 +20,24 @@
           </figure>
         </div>
         <div class="card-content">
-          <div class="content">{{ item["description"]}}</div>
+          <div class="content">
+            {{ item["description"]}}
+          </div>
         </div>
         <footer class="card-footer is-centered">
+          {% if item["rebuyable"] or item["count"] == 0 %}
           <button id="{{ 6*row+col }}" class="button is-primary card-footer-item buy">
-            Buy ({{ item["price"] }} G)
+            Buy (<figure class="image is-32x32"><img src="static/img/money_bag.png"></figure>
+              {{ item["price"] }}
+              {% if item["rebuyable"] %}
+              <div class="content">) (Owned: {{ item["count"] }}</div>
+              {% endif %})
           </button>
+          {% else %}
+          <button id="{{ 6*row+col }}" class="button is-success card-footer-item">
+            Owned
+          </button>
+          {% endif %}
         </footer>
       </div>
     </div>
@@ -36,7 +48,8 @@
 
 <script type="text/javascript">
   // Allow list of items to be used in javascript file
-  var items = {{ items|tojson }}
+  var items = {{ items|tojson }};
+  var balance = {{ balance }};
 </script>
 <script src="../static/shop.js"></script>
 

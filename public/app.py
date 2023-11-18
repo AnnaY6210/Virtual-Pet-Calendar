@@ -120,37 +120,40 @@ def calendar():
                 dates[date] = []
             dates[date].append([event["summary"], start_formatted, end_formatted])
 
-    # Tasks
+    # Task variables
     service = discovery.build("tasks", "v1", http=http_auth)
     results = service.tasklists().list().execute()
-
-    prev_claim_str = (
-        db.child("users").child(session["person"]["uid"]).get().val()["prev_claim"]
-    )
-    prev_claim_date = datetime.datetime.fromisoformat(prev_claim_str)
-    tasksDates = {}
     tasklists = results.get("items", [])
-    current_day = (
-        datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    ).isoformat() + "Z"
-    display_min = (
-        datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        - datetime.timedelta(days=10)
-    ).isoformat() + "Z"
+    
+    prev_claim_str = db.child("users").child(session["person"]["uid"]).get().val()["prev_claim"]
+    prev_claim_date = datetime.datetime.fromisoformat(prev_claim_str)
 
-    for item in tasklists:
+    tasks_dates = {}
+    current_day = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0))
+    claimable_money = 0
+    current_balance = db.child("users").child(session["person"]["uid"]).get().val()["balance"]
+
+    # Parse tasks in each of the user's tasklists
+    for task_list in tasklists:
+        # Add the claimable currency of the tasklist to the total
+        # Tasks have their reward defined by the positive integer after their title after a bar ("|")
+        currency_per_task = 10
+        suffix = task_list["title"].split("|")[-1].strip()
+        if suffix.isdigit():
+            currency_per_task = int(suffix)
+        claimable_money += calculateMoney(service, task_list, currency_per_task, prev_claim_str)
+
+        # List of tasks for display
         task_display = (
             service.tasks()
             .list(
-                tasklist=item["id"],
-                dueMin=display_min,
-                dueMax=current_day,
-                maxResults=10,
+                tasklist=task_list["id"],
+                dueMax=current_day.isoformat() + "Z",
+                maxResults=40,
                 showHidden=True,
             )
             .execute()
         )
-
         current_balance = (
             db.child("users").child(session["person"]["uid"]).get().val()["balance"]
         )
@@ -161,23 +164,26 @@ def calendar():
             formattedDate = date.strftime("%D")
 
             if task["status"] == "completed":
-                status = "Completed"
+                completion_date = datetime.datetime.strptime(task["completed"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                due_date = datetime.datetime.strptime(task["due"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                if (completion_date - due_date).days < 1:
+                    status = "Completed [+" + str(currency_per_task) + "]"
+                else:
+                    status = "Completed Late [<s>" + str(currency_per_task) + "</s>]"
             else:
                 status = "Incomplete"
+            
+            if not tasks_dates.get(formattedDate):
+                tasks_dates[formattedDate] = []
+            tasks_dates[formattedDate].append([task["title"], status])
 
-            if not tasksDates.get(formattedDate):
-                tasksDates[formattedDate] = []
-            tasksDates[formattedDate].append([task["title"], status])
-
-    return render_template(
-        "calendar.html",
-        dates=dates,
-        tasksDates=dict(sorted(tasksDates.items(), reverse=True)),
-        balance=current_balance,
-        prev_claim=prev_claim_date.strftime("%D"),
-        person=session["person"],
-    )
-
+    return render_template("calendar.html",
+                            dates=dates, 
+                            tasksDates=dict(sorted(tasks_dates.items(), reverse = True)), 
+                            balance = current_balance,
+                            prev_claim = prev_claim_date.strftime("%D"),
+                            claimable_money = claimable_money,
+                            person=session["person"],)
 
 @app.route("/claim_tasks")
 def claim_tasks():
@@ -192,49 +198,46 @@ def claim_tasks():
     service = discovery.build("tasks", "v1", http=http_auth)
     results = service.tasklists().list().execute()
     tasklists = results.get("items", [])
-
-    current_day = (
-        datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    ).isoformat()
-    prev_claim = (
-        db.child("users").child(session["person"]["uid"]).get().val()["prev_claim"]
-    )
+    current_day = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     money_gained = 0
-    current_balance = (
-        db.child("users").child(session["person"]["uid"]).get().val()["balance"]
-    )
+    current_balance = db.child("users").child(session["person"]["uid"]).get().val()["balance"]
+    prev_claim = db.child("users").child(session["person"]["uid"]).get().val()["prev_claim"]
 
     # Calculate money gained for task completions
-    for item in tasklists:
-        past_completed_tasks = (
+    for task_list in tasklists:
+        currency_per_task = 10
+        if task_list["title"].split()[-1].isdigit():
+            currency_per_task = int(task_list["title"].split()[-1])
+        money_gained += calculateMoney(service, task_list, currency_per_task, prev_claim)
+        
+    # Update values for current user
+    db.child("users").child(session["person"]["uid"]).update({"balance": current_balance + money_gained})
+    db.child("users").child(session["person"]["uid"]).update({"prev_claim": current_day.isoformat()})
+    return jsonify(balance=current_balance + money_gained,
+                   prev_claim=current_day.strftime("%D"))
+
+# Function for calculating the currency reward for a given tasklist
+def calculateMoney(service, tasklist, currency_per_task, prev_claim):
+    current_day = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)).isoformat()
+    total = 0
+    past_completed_tasks = (
             service.tasks()
             .list(
-                tasklist=item["id"],
+                tasklist=tasklist["id"],
                 dueMin=prev_claim + "Z",
                 dueMax=current_day + "Z",
                 showHidden=True,
             )
             .execute()
         )
-        task_list = past_completed_tasks.get("items", [])
-        for task in task_list:
-            if task["status"] == "completed":
-                completion_date = datetime.datetime.strptime(
-                    task["completed"], "%Y-%m-%dT%H:%M:%S.%fZ"
-                )
-                due_date = datetime.datetime.strptime(
-                    task["due"], "%Y-%m-%dT%H:%M:%S.%fZ"
-                )
-                if (completion_date - due_date).days < 1:
-                    money_gained += 100
-    # Update values for current user
-    db.child("users").child(session["person"]["uid"]).update(
-        {"balance": current_balance + money_gained}
-    )
-    db.child("users").child(session["person"]["uid"]).update(
-        {"prev_claim": current_day}
-    )
-    return ("", 204)
+    tasks = past_completed_tasks.get("items", [])
+    for task in tasks:
+        if task["status"] == "completed":
+            completion_date = datetime.datetime.strptime(task["completed"], "%Y-%m-%dT%H:%M:%S.%fZ")
+            due_date = datetime.datetime.strptime(task["due"], "%Y-%m-%dT%H:%M:%S.%fZ")
+            if (completion_date - due_date).days < 1:
+                total += currency_per_task
+    return total
 
 
 @app.route("/inv")
@@ -257,8 +260,15 @@ def shop():
         db.child("users").child(session["person"]["uid"]).get().val()["balance"]
     )
     itemData = db.child("items").get().val()
+    itemCount = db.child("users").child(session["person"]["uid"]).child("items").get().val()
+    # User has no items
+    if (not itemCount):
+        itemCount = {}
+    
     items = []
     for id, item in itemData.items():
+        item["id"] = id
+        item["count"] = itemCount.get(id, 0)
         items.append(item)
 
     # Test items
@@ -273,13 +283,7 @@ def shop():
         )
 
     items.sort(key=itemgetter("price"))
-    return render_template(
-        "shop.html",
-        balance=current_balance,
-        items=items,
-        zip=zip,
-        person=session["person"],
-    )
+    return render_template("shop.html", itemCount=itemCount, balance = current_balance, items=items, zip=zip, person=session["person"],)
 
 
 # Redirected here when a buy button is clicked
@@ -288,15 +292,16 @@ def buy():
     if "person" not in session or not session["person"]["is_logged_in"]:
         return redirect(url_for("login"))
     spent = int(request.form["price"])
-    item = request.form["name"]
-    current_balance = (
-        db.child("users").child(session["person"]["uid"]).get().val()["balance"]
-    )
+    id = request.form["id"]
+    current_balance = db.child("users").child(session["person"]["uid"]).get().val()["balance"]
+    itemCount = db.child("users").child(session["person"]["uid"]).child("items").get().val()
+    # User has no items
+    if (not itemCount):
+        itemCount = {}
+    # Update balance and item count
     if current_balance >= spent:
-        db.child("users").child(session["person"]["uid"]).update(
-            {"balance": current_balance - spent}
-        )
-    # Update user's currency and quanitity of that item
+        db.child("users").child(session["person"]["uid"]).update({"balance": current_balance - spent})
+        db.child("users").child(session["person"]["uid"]).child("items").update({id: itemCount.get(id, 0) + 1})
     return redirect(url_for("shop"))
 
 
