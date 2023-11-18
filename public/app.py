@@ -127,9 +127,8 @@ def claim_tasks():
         money_gained += util.calculate_money(service, task_list, currency_per_task, prev_claim)
         
     # Update values for current user
-    user = util.get_user(db, session["person"]["uid"])
-    user.update({"balance": current_balance + money_gained})
-    user.update({"prev_claim": current_day.isoformat()})
+    db.child("users").child(session["person"]["uid"]).update({"balance": current_balance + money_gained})
+    db.child("users").child(session["person"]["uid"]).update({"prev_claim": current_day.isoformat()})
     return jsonify(balance=current_balance + money_gained,
                    prev_claim=current_day.strftime("%D"))
 
@@ -163,15 +162,16 @@ def shop():
 @app.route("/buy", methods=["POST"])
 def buy():
     util.login_check(session)
-    user = util.get_user(db, session["person"]["uid"])
     spent = int(request.form["price"])
     id = request.form["id"]
-    current_balance = util.get_balance(db, session["person"]["uid"])
+    print(db.child("users").child(session["person"]["uid"]).get().val())
+    current_balance = db.child("users").child(session["person"]["uid"]).get().val()["balance"]
+    
     item_count = util.get_user_items(db,session["person"]["uid"])
     # Update balance and item count
     if current_balance >= spent:
-        user.update({"balance": current_balance - spent})
-        user.child("items").update({id: item_count.get(id, 0) + 1})
+        db.child("users").child(session["person"]["uid"]).update({"balance": current_balance - spent})
+        db.child("users").child(session["person"]["uid"]).child("items").update({id: item_count.get(id, 0) + 1})
     return redirect(url_for("shop"))
 
 

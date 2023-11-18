@@ -3,12 +3,12 @@ from flask import Flask, request, jsonify, redirect, url_for, render_template, s
 from oauth2client import client
 def login_check(session):
     if "person" not in session or not session["person"]["is_logged_in"]:
-        return redirect(url_for("login"))
+        redirect(url_for("login"))
     if "credentials" not in session:
-        return redirect(url_for("oauth2callback"))
+        redirect(url_for("oauth2callback"))
     credentials = client.OAuth2Credentials.from_json(session["credentials"])
     if credentials.access_token_expired:
-        return redirect(url_for("oauth2callback"))
+        redirect(url_for("oauth2callback"))
     return credentials
     
 def format_events(events):
@@ -105,9 +105,6 @@ def get_prev_claim(db, user_id):
 
 def get_balance(db, user_id):
     return db.child("users").child(user_id).get().val()["balance"]
-
-def get_user(db, user_id):
-    return db.child("users").child(user_id)
 
 def get_shop_items(db):
     return db.child("items").get().val()
