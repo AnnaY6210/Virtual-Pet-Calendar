@@ -22,11 +22,10 @@
   <div id="navbarBasicExample" class="navbar-menu">
     <div class="navbar-start">
       <a class="navbar-item" href="/calendar"> Home </a>
-      
+
       <a class="navbar-item" href="/inv"> Inventory </a>
 
       <a class="navbar-item" href="/shop"> Shop </a>
-      
       <div class="navbar-item currency-counter">
         <img src="/static/img/money_bag.png" />
         <div id="balance">{{balance}}</div>
@@ -36,10 +35,14 @@
     <div class="navbar-end">
       <div class="navbar-item">
         <div class="buttons">
+          {% if person["is_logged_in"] %}
+          <div class="navbar-item">Logged in as {{ person["name"] }}</div>
+          {% else %}
           <a class="button is-primary" href="/signup">
             <strong>Sign up</strong>
           </a>
           <a class="button is-light" href="/login"> Log in </a>
+          {% endif %}
         </div>
       </div>
     </div>
