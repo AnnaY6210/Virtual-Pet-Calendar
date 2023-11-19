@@ -28,7 +28,7 @@
       <button class="button is-primary claimtasks">Claim {{claimable_money}}G [Last Claimed: {{prev_claim}}]</button>
     </h1>
   </div>
-  {% for date, tasks in tasksDates.items() %}
+  {% for date, tasks in tasks_dates.items() %}
   <h1 class="subtitle">{{ date }}</h1>
   <div class="columns">
     {% for task in tasks %}
