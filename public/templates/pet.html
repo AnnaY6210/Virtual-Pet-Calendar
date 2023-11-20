@@ -29,9 +29,19 @@
     }
 </style>
 <div class="box mt-2">
-    <div class="Pet">
-        <img class="pet_spritesheet pixelart" src="../static/img/cat_spritesheet.png" alt="pet">
-    </div>
-    <progress class="progress is-success" value="20" max="100">20%</progress>
+    {% for pet in pets %}
+        {% if pet["equip"] %}
+        <div class="Pet">
+            <img class="pet_spritesheet pixelart" src="{{ pet['image'] }}" alt="pet">
+        </div>
+        <progress class="progress is-success" value="{{ pet['health'] }}" max="100">{{pet['health']}}%</progress>
+        {% endif %}
+    {% endfor %}
 </div>
+
+<script type="text/javascript">
+    // Allow list of items to be used in javascript file
+    var pets = {{ pets|tojson }};
+</script>
+<script src="../static/pet.js"></script>
 {% endblock %}

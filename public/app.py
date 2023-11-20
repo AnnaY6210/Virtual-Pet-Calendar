@@ -30,6 +30,7 @@ person = {"is_logged_in": False, "name": "", "email": "", "uid": ""}
 
 @app.route("/")
 def index():
+<<<<<<< Updated upstream
     if "person" not in session or not session["person"]["is_logged_in"]:
         return redirect(url_for("login"))
     if "credentials" not in session:
@@ -40,6 +41,18 @@ def index():
     return render_template("index.html", content="add cute pet here")
 
 
+=======
+    util.login_check(session)
+
+    # gets pet for this page 
+    pets = util.get_user_pets_list(db, session["person"]["uid"])
+    return render_template(
+        "index.html", pets=pets, person=session["person"]
+    )
+    
+TASK_SCOPE = "https://www.googleapis.com/auth/tasks"
+CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar"   
+>>>>>>> Stashed changes
 # Begin oauth callback route
 @app.route("/oauth2callback")
 def oauth2callback():
@@ -63,6 +76,7 @@ def oauth2callback():
 
 @app.route("/calendar")
 def calendar():
+<<<<<<< Updated upstream
     if "person" not in session or not session["person"]["is_logged_in"]:
         return redirect(url_for("login"))
     if "credentials" not in session:
@@ -70,6 +84,12 @@ def calendar():
     credentials = client.OAuth2Credentials.from_json(session["credentials"])
     if credentials.access_token_expired:
         return redirect(url_for("oauth2callback"))
+=======
+    credentials = util.login_check(session)
+    # gets user pet for this page
+    pets = util.get_user_pets_list(db, session["person"]["uid"])
+
+>>>>>>> Stashed changes
     http_auth = credentials.authorize(httplib2.Http())
     service = discovery.build("calendar", "v3", http=http_auth)
 
@@ -175,7 +195,13 @@ def calendar():
                             tasksDates=dict(sorted(tasks_dates.items(), reverse = True)), 
                             balance = current_balance,
                             prev_claim = prev_claim_date.strftime("%D"),
+<<<<<<< Updated upstream
                             claimable_money = claimable_money)
+=======
+                            claimable_money = claimable_money,
+                            pets=pets,
+                            person=session["person"],)
+>>>>>>> Stashed changes
 
 @app.route('/claim_tasks')
 def claim_tasks():
@@ -235,10 +261,20 @@ def calculateMoney(service, tasklist, currency_per_task, prev_claim):
 
 @app.route("/inv")
 def inventory():
+<<<<<<< Updated upstream
     if "person" not in session or not session["person"]["is_logged_in"]:
         return redirect(url_for("login"))
     current_balance = db.child("users").child(session["person"]["uid"]).get().val()["balance"]
     return render_template("inventory.html", balance = current_balance)
+=======
+    util.login_check(session)
+    # gets users pet
+    pets = util.get_user_pets_list(db, session["person"]["uid"])
+    current_balance = util.get_balance(db, session["person"]["uid"])
+    return render_template(
+        "inventory.html", pets=pets, balance=current_balance, person=session["person"]
+    )
+>>>>>>> Stashed changes
 
 
 @app.route("/shop")
@@ -253,7 +289,12 @@ def shop():
         itemCount = {}
     
     items = []
+<<<<<<< Updated upstream
     for id, item in itemData.items():
+=======
+    pets = util.get_user_pets_list(db, session["person"]["uid"])
+    for id, item in item_data.items():
+>>>>>>> Stashed changes
         item["id"] = id
         item["count"] = itemCount.get(id, 0)
         items.append(item)
@@ -264,7 +305,12 @@ def shop():
                       "description": "Description " + str(i), "price": 50*i})
     
     items.sort(key=itemgetter("price"))
+<<<<<<< Updated upstream
     return render_template("shop.html", itemCount=itemCount, balance = current_balance, items=items, zip=zip)
+=======
+    return render_template("shop.html", pets=pets, itemCount=item_count, balance = current_balance, items=items, zip=zip, person=session["person"],)
+
+>>>>>>> Stashed changes
 
 # Redirected here when a buy button is clicked
 @app.route("/buy", methods=["POST"])
@@ -274,6 +320,7 @@ def buy():
     spent = int(request.form["price"])
     id = request.form["id"]
     current_balance = db.child("users").child(session["person"]["uid"]).get().val()["balance"]
+<<<<<<< Updated upstream
     itemCount = db.child("users").child(session["person"]["uid"]).child("items").get().val()
     # User has no items
     if (not itemCount):
@@ -282,6 +329,20 @@ def buy():
     if current_balance >= spent:
         db.child("users").child(session["person"]["uid"]).update({"balance": current_balance - spent})
         db.child("users").child(session["person"]["uid"]).child("items").update({id: itemCount.get(id, 0) + 1})
+=======
+    
+    item_count = util.get_user_items(db,session["person"]["uid"])
+    pet_info = util.get_pet_info(db)
+    # Update balance and item count
+    if current_balance >= spent:
+        db.child("users").child(session["person"]["uid"]).update({"balance": current_balance - spent})
+        if id in pet_info.keys():
+            db.child("users").child(session["person"]["uid"]).child("pets").child(id).update({
+                "health": 100,
+                "equip": False
+            })
+        db.child("users").child(session["person"]["uid"]).child("items").update({id: item_count.get(id, 0) + 1})
+>>>>>>> Stashed changes
     return redirect(url_for("shop"))
 
 
