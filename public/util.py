@@ -114,3 +114,21 @@ def get_user_items(db, user_id):
     if (not item_count):
         item_count = {}
     return item_count
+
+def get_pet_info(db):
+    return db.child("pets").get().val()
+
+def get_user_pets_list(db, user_id):
+    user_pets = db.child("users").child(user_id).child("pets").get().val()
+    if (not user_pets):
+        user_pets = {}
+    pet_info = get_pet_info(db)
+    pets = []
+    for id, item in user_pets.items():
+        pet = {}
+        pet["id"] = id
+        pet["health"] = item["health"]
+        pet["equip"] = item["equip"]
+        pet["image"] = pet_info[id]["image"]
+        pets.append(pet)
+    return pets

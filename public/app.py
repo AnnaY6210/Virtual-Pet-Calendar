@@ -28,12 +28,16 @@ person = {"is_logged_in": False, "name": "", "email": "", "uid": ""}
 @app.route("/")
 def index():
     util.login_check(session)
+
+    # gets pet for this page 
+    pets = util.get_user_pets_list(db, session["person"]["uid"])
     return render_template(
-        "index.html", person=session["person"]
-    )
+        "index.html", pets=pets, person=session["person"]
+
     
 TASK_SCOPE = "https://www.googleapis.com/auth/tasks"
 CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar"   
+
 # Begin oauth callback route
 @app.route("/oauth2callback")
 def oauth2callback():
@@ -56,6 +60,9 @@ def oauth2callback():
 @app.route("/calendar")
 def calendar():
     credentials = util.login_check(session)
+    # gets user pet for this page
+    pets = util.get_user_pets_list(db, session["person"]["uid"])
+
     http_auth = credentials.authorize(httplib2.Http())
     service = discovery.build("calendar", "v3", http=http_auth)
 
@@ -105,7 +112,9 @@ def calendar():
                             balance = current_balance,
                             prev_claim = prev_claim_date.strftime("%D"),
                             claimable_money = claimable_money,
+                            pets=pets,
                             person=session["person"],)
+      
 
 @app.route("/claim_tasks")
 def claim_tasks():
@@ -137,9 +146,11 @@ def claim_tasks():
 @app.route("/inv")
 def inventory():
     util.login_check(session)
+    # gets users pet
+    pets = util.get_user_pets_list(db, session["person"]["uid"])
     current_balance = util.get_balance(db, session["person"]["uid"])
     return render_template(
-        "inventory.html", balance=current_balance, person=session["person"]
+        "inventory.html", pets=pets, balance=current_balance, person=session["person"]
     )
 
 
@@ -150,12 +161,14 @@ def shop():
     item_data = util.get_shop_items(db)
     item_count = util.get_user_items(db,session["person"]["uid"])
     items = []
+    pets = util.get_user_pets_list(db, session["person"]["uid"])
     for id, item in item_data.items():
         item["id"] = id
         item["count"] = item_count.get(id, 0)
         items.append(item)
     items.sort(key=itemgetter("price"))
-    return render_template("shop.html", itemCount=item_count, balance = current_balance, items=items, zip=zip, person=session["person"],)
+    return render_template("shop.html", pets=pets, itemCount=item_count, balance = current_balance, items=items, zip=zip, person=session["person"],)
+
 
 
 # Redirected here when a buy button is clicked
@@ -166,11 +179,16 @@ def buy():
     id = request.form["id"]
     print(db.child("users").child(session["person"]["uid"]).get().val())
     current_balance = db.child("users").child(session["person"]["uid"]).get().val()["balance"]
-    
     item_count = util.get_user_items(db,session["person"]["uid"])
+    pet_info = util.get_pet_info(db)
     # Update balance and item count
     if current_balance >= spent:
         db.child("users").child(session["person"]["uid"]).update({"balance": current_balance - spent})
+        if id in pet_info.keys():
+            db.child("users").child(session["person"]["uid"]).child("pets").child(id).update({
+                "health": 100,
+                "equip": False
+            })
         db.child("users").child(session["person"]["uid"]).child("items").update({id: item_count.get(id, 0) + 1})
     return redirect(url_for("shop"))
 
