@@ -1,38 +1,49 @@
 {% extends "index.html" %}
 {% block content %}
 
-
-<div hidden>
-  <div id="row" class="columns">
-    <div id="item" class="column is-2">
-      <div class="card">
-        <header class="card-header">
-          <p class="card-header-title title is-4 is-centered">Item Title</p>
-        </header>
-        <div class="card-image">
-          <figure class="image is-2by1">
-            <img src="https://bulma.io/images/placeholders/640x320.png">
-          </figure>
-        </div>
-        <div class="card-content">
-          <div class="content">Item description</div>
-        </div>
-        <footer class="card-footer is-centered">
-          <button class="button is-primary card-footer-item">Use</button>
-        </footer>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class = "section">
+<div class="section">
   <h1 class="title is-1">Inventory</h1>
   <div class="column is-half">
     <textarea class="textarea has-fixed-size" placeholder="Search" rows="1"></textarea>
   </div>
-  <div id="start"></div>
+  {% for row in range((items|length + 5) // 6) %}
+  <div class="columns">
+    {% for col, item in zip(range(6), items[6*row:6*row+6]) %}
+    <div class="column is-2">
+      <div class="card">
+        <header class="card-header">
+          <p class="card-header-title title is-4 is-centered">{{ item["name"] }}</p>
+        </header>
+        <div class="card-image">
+          <figure class="image">
+            <img src="{{ item['image'] }}">
+          </figure>
+        </div>
+        <div class="card-content">
+          <div class="content">
+            {{ item["description"]}}
+            {% if item["rebuyable"] %}
+            (x{{ item["count"] }})
+            {% endif %}
+          </div>
+        </div>
+        <footer class="card-footer is-centered">
+          <button id="{{ 6*row+col }}" class="button is-primary card-footer-item test">
+            Button
+          </button>
+        </footer>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
 </div>
 
+<script type="text/javascript">
+  // Allow list of items to be used in javascript file
+  var items = {{ items|tojson }};
+  var balance = {{ balance }};
+</script>
+<script src="../static/inventory.js"></script>
 
-<script src="{{url_for('static', filename='inventory.js')}}"></script>
 {% endblock %}
