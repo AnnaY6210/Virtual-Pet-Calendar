@@ -31,8 +31,7 @@ def index():
 
     # gets pet for this page 
     pets = util.get_user_pets_list(db, session["person"]["uid"])
-    return render_template(
-        "index.html", pets=pets, person=session["person"]
+    return render_template("index.html", pets=pets, person=session["person"])
 
     
 TASK_SCOPE = "https://www.googleapis.com/auth/tasks"
