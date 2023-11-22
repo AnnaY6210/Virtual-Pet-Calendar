@@ -148,8 +148,18 @@ def inventory():
     # gets users pet
     pets = util.get_user_pets_list(db, session["person"]["uid"])
     current_balance = util.get_balance(db, session["person"]["uid"])
+    item_data = util.get_shop_items(db)
+    item_count = util.get_user_items(db,session["person"]["uid"])
+    items = []
+    for id, item in item_data.items():
+        if (id in item_count.keys()):
+            item["id"] = id
+            item["count"] = item_count[id]
+            items.append(item)
+    items.sort(key=itemgetter("count"), reverse=True)
     return render_template(
-        "inventory.html", pets=pets, balance=current_balance, person=session["person"]
+        "inventory.html", pets=pets, item_count=item_count, balance=current_balance,
+        items=items, zip=zip, person=session["person"]
     )
 
 
@@ -166,7 +176,7 @@ def shop():
         item["count"] = item_count.get(id, 0)
         items.append(item)
     items.sort(key=itemgetter("price"))
-    return render_template("shop.html", pets=pets, itemCount=item_count, balance = current_balance, items=items, zip=zip, person=session["person"],)
+    return render_template("shop.html", pets=pets, balance = current_balance, items=items, zip=zip, person=session["person"],)
 
 
 
