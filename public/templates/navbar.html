@@ -35,7 +35,7 @@
     <div class="navbar-end">
       <div class="navbar-item">
         <div class="buttons">
-          {% if person["is_logged_in"] %}
+          {% if person %}
           <div class="navbar-item">Logged in as {{ person["name"] }}</div>
           {% else %}
           <a class="button is-primary" href="/signup">

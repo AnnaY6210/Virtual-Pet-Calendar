@@ -27,7 +27,13 @@ person = {"is_logged_in": False, "name": "", "email": "", "uid": ""}
 
 @app.route("/")
 def index():
-    util.login_check(session)
+    if "person" not in session or not session["person"]["is_logged_in"]:
+        return redirect(url_for("login"))
+    if "credentials" not in session:
+        return redirect(url_for("oauth2callback"))
+    credentials = client.OAuth2Credentials.from_json(session["credentials"])
+    if credentials.access_token_expired:
+        return redirect(url_for("oauth2callback"))
 
     # gets pet for this page 
     pets = util.get_user_pets_list(db, session["person"]["uid"])
@@ -58,7 +64,13 @@ def oauth2callback():
 
 @app.route("/calendar")
 def calendar():
-    credentials = util.login_check(session)
+    if "person" not in session or not session["person"]["is_logged_in"]:
+        return redirect(url_for("login"))
+    if "credentials" not in session:
+        return redirect(url_for("oauth2callback"))
+    credentials = client.OAuth2Credentials.from_json(session["credentials"])
+    if credentials.access_token_expired:
+        return redirect(url_for("oauth2callback"))
     # gets user pet for this page
     pets = util.get_user_pets_list(db, session["person"]["uid"])
 
@@ -117,7 +129,14 @@ def calendar():
 
 @app.route("/claim_tasks")
 def claim_tasks():
-    credentials = util.login_check(session)
+    if "person" not in session or not session["person"]["is_logged_in"]:
+        return redirect(url_for("login"))
+    if "credentials" not in session:
+        return redirect(url_for("oauth2callback"))
+    credentials = client.OAuth2Credentials.from_json(session["credentials"])
+    if credentials.access_token_expired:
+        return redirect(url_for("oauth2callback"))
+    
     http_auth = credentials.authorize(httplib2.Http())
     service = discovery.build("tasks", "v1", http=http_auth)
     results = service.tasklists().list().execute()
@@ -144,7 +163,14 @@ def claim_tasks():
 
 @app.route("/inv")
 def inventory():
-    util.login_check(session)
+    if "person" not in session or not session["person"]["is_logged_in"]:
+        return redirect(url_for("login"))
+    if "credentials" not in session:
+        return redirect(url_for("oauth2callback"))
+    credentials = client.OAuth2Credentials.from_json(session["credentials"])
+    if credentials.access_token_expired:
+        return redirect(url_for("oauth2callback"))
+    
     # gets users pet
     pets = util.get_user_pets_list(db, session["person"]["uid"])
     current_balance = util.get_balance(db, session["person"]["uid"])
@@ -155,7 +181,14 @@ def inventory():
 
 @app.route("/shop")
 def shop():
-    util.login_check(session)
+    if "person" not in session or not session["person"]["is_logged_in"]:
+        return redirect(url_for("login"))
+    if "credentials" not in session:
+        return redirect(url_for("oauth2callback"))
+    credentials = client.OAuth2Credentials.from_json(session["credentials"])
+    if credentials.access_token_expired:
+        return redirect(url_for("oauth2callback"))
+    
     current_balance = util.get_balance(db, session["person"]["uid"])
     item_data = util.get_shop_items(db)
     item_count = util.get_user_items(db,session["person"]["uid"])
@@ -173,7 +206,14 @@ def shop():
 # Redirected here when a buy button is clicked
 @app.route("/buy", methods=["POST"])
 def buy():
-    util.login_check(session)
+    if "person" not in session or not session["person"]["is_logged_in"]:
+        return redirect(url_for("login"))
+    if "credentials" not in session:
+        return redirect(url_for("oauth2callback"))
+    credentials = client.OAuth2Credentials.from_json(session["credentials"])
+    if credentials.access_token_expired:
+        return redirect(url_for("oauth2callback"))
+    
     spent = int(request.form["price"])
     id = request.form["id"]
     print(db.child("users").child(session["person"]["uid"]).get().val())

@@ -1,15 +1,7 @@
 import os, flask, sys, httplib2, datetime, pyrebase
 from flask import Flask, request, jsonify, redirect, url_for, render_template, session
 from oauth2client import client
-def login_check(session):
-    if "person" not in session or not session["person"]["is_logged_in"]:
-        redirect(url_for("login"))
-    if "credentials" not in session:
-        redirect(url_for("oauth2callback"))
-    credentials = client.OAuth2Credentials.from_json(session["credentials"])
-    if credentials.access_token_expired:
-        redirect(url_for("oauth2callback"))
-    return credentials
+
     
 def format_events(events):
     dates = {}
