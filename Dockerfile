@@ -1,9 +1,9 @@
 FROM python:3.10
 
-# dependencies
-RUN pip install Flask gunicorn firebase firebase-admin httplib2 datetime pyrebase4 oauth2client
+# dependencies 
+RUN pip install -r requirements.txt
 
-COPY public/ app/
+COPY public/ app
 WORKDIR /app
 
 ENV PORT 8080
