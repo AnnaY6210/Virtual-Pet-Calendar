@@ -35,8 +35,11 @@
     <div class="navbar-end">
       <div class="navbar-item">
         <div class="buttons">
-          {% if person %}
+          {% if person%}
           <div class="navbar-item">Logged in as {{ person["name"] }}</div>
+          <a class="button is-danger" href="/logout">
+            <strong>Log Out</strong>
+          </a>
           {% else %}
           <a class="button is-primary" href="/signup">
             <strong>Sign up</strong>

@@ -35,9 +35,7 @@ def index():
     if credentials.access_token_expired:
         return redirect(url_for("oauth2callback"))
 
-    # gets pet for this page 
-    pets = util.get_user_pets_list(db, session["person"]["uid"])
-    return render_template("index.html", pets=pets, person=session["person"])
+    return redirect(url_for("calendar"))
 
     
 TASK_SCOPE = "https://www.googleapis.com/auth/tasks"
@@ -155,7 +153,7 @@ def claim_tasks():
         
     # Update values for current user
     db.child("users").child(session["person"]["uid"]).update({"balance": current_balance + money_gained})
-    db.child("users").child(session["person"]["uid"]).update({"prev_claim": current_day.isoformat()})
+    db.child("users").child(session["person"]["uid"]).update({"prev_claim": (current_day + datetime.timedelta(days=1)).isoformat()})
     return jsonify(balance=current_balance + money_gained,
                    prev_claim=current_day.strftime("%D"))
 
@@ -247,6 +245,12 @@ def buy():
 def login():
     return render_template("login.html")
 
+@app.route("/logout")
+def logout():
+    if session:
+        session.clear()
+    return redirect(url_for("login"))
+
 
 # If someone clicks on login, they are redirected to /result
 @app.route("/result", methods=["POST", "GET"])
@@ -262,13 +266,11 @@ def result():
             session["person"] = {
                 "is_logged_in": True,
                 "email": user["email"],
+                "token": user["idToken"],
                 "uid": user["localId"],
                 # Get the name of the user
                 "name": db.child("users").child(user["localId"]).get().val()["name"],
-                "prev_claim": db.child("users")
-                .child(user["localId"])
-                .get()
-                .val()["prev_claim"],
+                "prev_claim": util.get_prev_claim(db, user["localId"]),
                 "balance": db.child("users")
                 .child(user["localId"])
                 .get()
@@ -313,6 +315,7 @@ def register():
                 "is_logged_in": True,
                 "email": user["email"],
                 "uid": user["localId"],
+                "token": user["idToken"],
                 # Get the name of the user
                 "name": name,
                 "prev_claim": current_day,

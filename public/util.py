@@ -1,8 +1,5 @@
-import os, flask, sys, httplib2, datetime, pyrebase
-from flask import Flask, request, jsonify, redirect, url_for, render_template, session
-from oauth2client import client
+import datetime
 
-    
 def format_events(events):
     dates = {}
     for event in events:
@@ -26,7 +23,7 @@ def format_events(events):
 
 def format_tasks(tasklists, service, prev_claim_str):
     claimable_money = 0
-    current_day = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0))
+    tmrw = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)) + datetime.timedelta(days=1)
     formatted_tasks = {}
     for task_list in tasklists:
         # Add the claimable currency of the tasklist to the total
@@ -42,7 +39,7 @@ def format_tasks(tasklists, service, prev_claim_str):
             service.tasks()
             .list(
                 tasklist=task_list["id"],
-                dueMax=current_day.isoformat() + "Z",
+                dueMax=tmrw.isoformat() + "Z",
                 maxResults=40,
                 showHidden=True,
             )
@@ -73,14 +70,14 @@ def format_tasks(tasklists, service, prev_claim_str):
 
 # Function for calculating the currency reward for a given tasklist
 def calculate_money(service, tasklist, currency_per_task, prev_claim):
-    current_day = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)).isoformat()
+    tmrw = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) + datetime.timedelta(days=1)).isoformat()
     total = 0
     past_completed_tasks = (
             service.tasks()
             .list(
                 tasklist=tasklist["id"],
                 dueMin=prev_claim + "Z",
-                dueMax=current_day + "Z",
+                dueMax=tmrw + "Z",
                 showHidden=True,
             )
             .execute()
