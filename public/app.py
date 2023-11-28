@@ -70,7 +70,7 @@ def calendar():
     if credentials.access_token_expired:
         return redirect(url_for("oauth2callback"))
     # gets user pet for this page
-    pets = util.get_user_pets_list(db, session["person"]["uid"])
+    pets = util.get_user_pets_list(db, session["person"]["uid"], session["person"]["token"])
 
     http_auth = credentials.authorize(httplib2.Http())
     service = discovery.build("calendar", "v3", http=http_auth)
@@ -146,14 +146,15 @@ def claim_tasks():
 
     # Calculate money gained for task completions
     for task_list in tasklists:
-        currency_per_task = 10
+        currency_per_task = util.DEFAULT_REWARD
         if task_list["title"].split()[-1].isdigit():
             currency_per_task = int(task_list["title"].split()[-1])
         money_gained += util.calculate_money(service, task_list, currency_per_task, prev_claim)
         
     # Update values for current user
-    db.child("users").child(session["person"]["uid"]).update({"balance": current_balance + money_gained})
-    db.child("users").child(session["person"]["uid"]).update({"prev_claim": (current_day + datetime.timedelta(days=1)).isoformat()})
+    if money_gained > 0:
+        db.child("users").child(session["person"]["uid"]).update({"balance": current_balance + money_gained}, session["person"]["token"])
+        db.child("users").child(session["person"]["uid"]).update({"prev_claim": (current_day + datetime.timedelta(days=1)).isoformat()}, session["person"]["token"])
     return jsonify(balance=current_balance + money_gained,
                    prev_claim=current_day.strftime("%D"))
 
@@ -170,7 +171,7 @@ def inventory():
         return redirect(url_for("oauth2callback"))
     
     # gets users pet
-    pets = util.get_user_pets_list(db, session["person"]["uid"])
+    pets = util.get_user_pets_list(db, session["person"]["uid"], session["person"]["token"])
     current_balance = util.get_balance(db, session["person"]["uid"])
     item_data = util.get_shop_items(db)
     item_count = util.get_user_items(db,session["person"]["uid"])
@@ -201,7 +202,7 @@ def shop():
     item_data = util.get_shop_items(db)
     item_count = util.get_user_items(db,session["person"]["uid"])
     items = []
-    pets = util.get_user_pets_list(db, session["person"]["uid"])
+    pets = util.get_user_pets_list(db, session["person"]["uid"], session["person"]["token"])
     for id, item in item_data.items():
         item["id"] = id
         item["count"] = item_count.get(id, 0)
@@ -230,14 +231,14 @@ def buy():
     pet_info = util.get_pet_info(db)
     # Update balance and item count
     if current_balance >= spent:
-        db.child("users").child(session["person"]["uid"]).update({"balance": current_balance - spent})
+        db.child("users").child(session["person"]["uid"]).update({"balance": current_balance - spent}, session["person"]["token"], session["person"]["token"])
         if id in pet_info.keys():
             db.child("users").child(session["person"]["uid"]).child("pets").child(id).update({
                 "health": 100,
                 "equip": False,
                 "last_time": datetime.datetime.now()
-            })
-        db.child("users").child(session["person"]["uid"]).child("items").update({id: item_count.get(id, 0) + 1})
+            }, session["person"]["token"])
+        db.child("users").child(session["person"]["uid"]).child("items").update({id: item_count.get(id, 0) + 1}, session["person"]["token"])
     return redirect(url_for("shop"))
 
 
@@ -329,7 +330,7 @@ def register():
                 "balance": session["person"]["balance"],
             }
 
-            db.child("users").child(session["person"]["uid"]).set(data)
+            db.child("users").child(session["person"]["uid"]).set(data, session["person"]["token"])
             # Go to welcome page
             return redirect(url_for("index"))
         except:
