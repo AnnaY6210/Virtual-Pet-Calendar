@@ -119,10 +119,29 @@ def get_user_pets_list(db, user_id):
     pet_info = get_pet_info(db)
     pets = []
     for id, item in user_pets.items():
+        time_now = datetime.datetime.now()
+        time_now_string = time_now.strftime("%m/%d/%Y, %H:%M:%S.%f")
+        if "last_time" not in item.keys():
+            db.child("users").child(user_id).child("pets").child(id).update({"last_time": time_now_string})
+            time_then = time_now
+        else:
+            time_then = datetime.datetime.strptime(item["last_time"], "%m/%d/%Y, %H:%M:%S.%f")
+        delta = time_now - time_then
+
         pet = {}
         pet["id"] = id
-        pet["health"] = item["health"]
         pet["equip"] = item["equip"]
         pet["image"] = pet_info[id]["image"]
+        if item["equip"] is True:
+            if item["health"] > 0:
+                pet["health"] = item["health"] - (delta.days * 10)
+                db.child("users").child(user_id).child("pets").child(id).update({"health": pet["health"], 
+                                                                                 "last_time": time_now_string})
+            else:
+                pet["health"] = item["health"]
+        else:
+            pet["health"] = item["health"]
+            new_time = (time_then + delta).strftime("%m/%d/%Y, %H:%M:%S.%f")
+            db.child("users").child(user_id).child("pets").child(id).update({"last_time": new_time})
         pets.append(pet)
     return pets

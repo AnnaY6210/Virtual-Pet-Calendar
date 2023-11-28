@@ -236,7 +236,8 @@ def buy():
         if id in pet_info.keys():
             db.child("users").child(session["person"]["uid"]).child("pets").child(id).update({
                 "health": 100,
-                "equip": False
+                "equip": False,
+                "last_time": datetime.datetime.now()
             })
         db.child("users").child(session["person"]["uid"]).child("items").update({id: item_count.get(id, 0) + 1})
     return redirect(url_for("shop"))
@@ -342,4 +343,4 @@ def register():
 
 
 if __name__ == "__main__":
-    app.run()
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))

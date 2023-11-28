@@ -1,6 +1,6 @@
 {% block pet %}
 <style>
-    .Pet {
+    .pet, .dead_pet {
         width: calc(40px * 6);
         height: calc(40px * 6);
         position:relative;
@@ -36,9 +36,15 @@
 <div class="box mt-2 sticky">
     {% for pet in pets %}
         {% if pet["equip"] %}
-        <div class="Pet">
-            <img class="pet_spritesheet pixelart" src="{{ pet['image'] }}" alt="pet">
-        </div>
+            {% if pet['health'] == 0 %}
+                <div class="dead_pet">
+                    <img class="pixelart" src="static/img/grave.png" alt="grave">
+                </div>
+            {% else %}
+                <div class="pet">
+                    <img class="pet_spritesheet pixelart" src="{{ pet['image'] }}" alt="pet">
+                </div>
+            {% endif %}
         <progress class="progress is-success" value="{{ pet['health'] }}" max="100">{{pet['health']}}%</progress>
         {% endif %}
     {% endfor %}
