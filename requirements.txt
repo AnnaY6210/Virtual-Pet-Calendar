@@ -1,3 +1,5 @@
+# requirements.txt
+gunicorn
 blinker==1.7.0
 CacheControl==0.13.1
 cachetools==5.3.2

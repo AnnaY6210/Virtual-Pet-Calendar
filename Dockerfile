@@ -1,9 +1,12 @@
 FROM python:3.10
 
+COPY requirements.txt /app/requirements.txt
+WORKDIR /app
+
 # dependencies 
 RUN pip install -r requirements.txt
 
-COPY public/ app
+COPY public/ /app
 WORKDIR /app
 
 ENV PORT 8080
