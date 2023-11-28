@@ -18,6 +18,11 @@
         width: calc(160px * 6);
     }
 
+    .sticky {
+        position: sticky;
+        top: 0;
+        z-index:2;
+    }
 
     @keyframes moveSpritesheet {
         from {
@@ -28,7 +33,7 @@
         }
     }
 </style>
-<div class="box mt-2">
+<div class="box mt-2 sticky">
     {% for pet in pets %}
         {% if pet["equip"] %}
         <div class="Pet">

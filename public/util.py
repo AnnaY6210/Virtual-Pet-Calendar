@@ -27,7 +27,7 @@ def format_events(events):
 def format_tasks(tasklists, service, prev_claim_str):
     claimable_money = 0
     current_day = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0))
-    tasks_dates = {}
+    formatted_tasks = {}
     for task_list in tasklists:
         # Add the claimable currency of the tasklist to the total
         # Tasks have their reward defined by the positive integer after their title after a bar ("|")
@@ -37,8 +37,8 @@ def format_tasks(tasklists, service, prev_claim_str):
             currency_per_task = int(suffix)
         claimable_money += calculate_money(service, task_list, currency_per_task, prev_claim_str)
 
-        # List of tasks for display
-        task_display = (
+        # Generate list of tasks for display
+        tasks_to_display = (
             service.tasks()
             .list(
                 tasklist=task_list["id"],
@@ -48,8 +48,8 @@ def format_tasks(tasklists, service, prev_claim_str):
             )
             .execute()
         )
-        # Always display at least some tasks
-        tasks = task_display.get("items", [])
+        # Generate formatted dates and task statuses
+        tasks = tasks_to_display.get("items", [])
         for task in tasks:
             date = datetime.datetime.strptime(task["due"], "%Y-%m-%dT%H:%M:%S.%fZ")
             formatted_date = date.strftime("%D")
@@ -57,17 +57,19 @@ def format_tasks(tasklists, service, prev_claim_str):
             if task["status"] == "completed":
                 completion_date = datetime.datetime.strptime(task["completed"], "%Y-%m-%dT%H:%M:%S.%fZ")
                 due_date = datetime.datetime.strptime(task["due"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                # Status for on-time completion
                 if (completion_date - due_date).days < 1:
                     status = "Completed [+" + str(currency_per_task) + "]"
+                # Status for late completion
                 else:
                     status = "Completed Late [<s>" + str(currency_per_task) + "</s>]"
             else:
                 status = "Incomplete"
             
-            if not tasks_dates.get(formatted_date):
-                tasks_dates[formatted_date] = []
-            tasks_dates[formatted_date].append([task["title"], status])
-    return tasks_dates, claimable_money
+            if not formatted_tasks.get(formatted_date):
+                formatted_tasks[formatted_date] = []
+            formatted_tasks[formatted_date].append([task["title"], status])
+    return formatted_tasks, claimable_money
 
 # Function for calculating the currency reward for a given tasklist
 def calculate_money(service, tasklist, currency_per_task, prev_claim):
