@@ -1,37 +1,37 @@
 {% block pet %}
 <style>
-    .pet, .dead_pet {
-        width: calc(40px * 6);
-        height: calc(40px * 6);
-        position:relative;
-        overflow: hidden;
-    }
+  .pet, .dead_pet {
+    width: calc(40px * 6);
+    height: calc(40px * 6);
+    position:relative;
+    overflow: hidden;
+  }
 
-    .pixelart {
-        image-rendering: pixelated;
-    }
+  .pixelart {
+    image-rendering: pixelated;
+  }
 
-    .pet_spritesheet {
-        animation: moveSpritesheet 1s steps(4) infinite;
-        max-width: none;
-        position: absolute;
-        width: calc(160px * 6);
-    }
+  .pet_spritesheet {
+    animation: moveSpritesheet 1s steps(4) infinite;
+    max-width: none;
+    position: absolute;
+    width: calc(160px * 6);
+  }
 
-    .sticky {
-        position: sticky;
-        top: 0;
-        z-index:2;
-    }
+  .sticky {
+    position: sticky;
+    top: 0;
+    z-index:2;
+  }
 
-    @keyframes moveSpritesheet {
-        from {
-            transform: translate3d(0px, 0, 0);
-        }
-        to {
-            transform: translate3d(-100%, 0, 0);
-        }
+  @keyframes moveSpritesheet {
+    from {
+      transform: translate3d(0px, 0, 0);
     }
+    to {
+      transform: translate3d(-100%, 0, 0);
+    }
+  }
 </style>
 <div class="box mt-2 sticky">
     {% for pet in pets %}
@@ -51,8 +51,8 @@
 </div>
 
 <script type="text/javascript">
-    // Allow list of items to be used in javascript file
-    var pets = {{ pets|tojson }};
+  // Allow list of items to be used in javascript file
+  var pets = {{ pets|tojson }};
 </script>
 <script src="../static/pet.js"></script>
 {% endblock %}

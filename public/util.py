@@ -24,7 +24,7 @@ def format_events(events):
 
 def format_tasks(tasklists, service, prev_claim_str):
     claimable_money = 0
-    tmrw = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)) + datetime.timedelta(days=1)
+    tomorrow = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)) + datetime.timedelta(days=1)
     formatted_tasks = {}
     for task_list in tasklists:
         # Add the claimable currency of the tasklist to the total
@@ -40,7 +40,7 @@ def format_tasks(tasklists, service, prev_claim_str):
             service.tasks()
             .list(
                 tasklist=task_list["id"],
-                dueMax=tmrw.isoformat() + "Z",
+                dueMax=tomorrow.isoformat() + "Z",
                 maxResults=40,
                 showHidden=True,
             )
@@ -71,14 +71,14 @@ def format_tasks(tasklists, service, prev_claim_str):
 
 # Function for calculating the currency reward for a given tasklist
 def calculate_money(service, tasklist, currency_per_task, prev_claim):
-    tmrw = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) + datetime.timedelta(days=1)).isoformat()
+    tomorrow = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) + datetime.timedelta(days=1)).isoformat()
     total = 0
     past_completed_tasks = (
             service.tasks()
             .list(
                 tasklist=tasklist["id"],
                 dueMin=prev_claim + "Z",
-                dueMax=tmrw + "Z",
+                dueMax=tomorrow + "Z",
                 showHidden=True,
             )
             .execute()
@@ -132,7 +132,7 @@ def get_item_info_list(db, user_id, item_ids):
             items.append(item)
     return items
 
-def get_user_pets_list(db, user_id):
+def get_user_pets_list(db, user_id, token):
     user_pets = db.child("users").child(user_id).child("pets").get().val()
     if (not user_pets):
         user_pets = {}

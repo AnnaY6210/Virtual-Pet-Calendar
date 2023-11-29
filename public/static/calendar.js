@@ -8,4 +8,16 @@ $(document).on('click', ".claimtasks",function(e){
     
     return false;
     
-  }); 
+  });
+
+$(document).on('click', ".tutorial-button",function(e){
+    document.getElementsByClassName("tutorial")[0].classList.add('is-active');
+});
+
+$(document).on('click', ".modal-close",function(e){
+    document.getElementsByClassName("tutorial")[0].classList.remove('is-active');
+});
+
+$(document).on('click', ".modal-background",function(e){
+    document.getElementsByClassName("tutorial")[0].classList.remove('is-active');
+}); 
