@@ -22,6 +22,9 @@
         <div class="card-content">
           <div class="content">
             {{ item["description"]}}
+            {% if item["rebuyable"] %}
+              (Owned: <span id="Owned {{ 6*row+col }}">{{ item["count"] }}</span>)
+            {% endif %}
           </div>
         </div>
         <footer class="card-footer is-centered">
@@ -29,9 +32,7 @@
           <button id="{{ 6*row+col }}" class="button is-primary card-footer-item buy">
             Buy (<figure class="image is-32x32"><img src="static/img/money_bag.png"></figure>
               {{ item["price"] }}
-              {% if item["rebuyable"] %}
-              <div class="content">) (Owned: {{ item["count"] }}</div>
-              {% endif %})
+              )
           </button>
           {% else %}
           <button id="{{ 6*row+col }}" class="button is-success card-footer-item">
