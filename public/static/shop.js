@@ -1,5 +1,6 @@
 $(document).on('click', '.buy', function(event) {
-    var item = items[Number(event.currentTarget.id)];
+    var button = event.currentTarget;
+    var item = items[Number(button.id)];
     var price = item["price"];
 
     if (balance >= price) {
@@ -9,14 +10,14 @@ $(document).on('click', '.buy', function(event) {
             document.getElementById("balance").innerHTML = String(balance);
             if (!item["rebuyable"]) {
                 // Remove buy button
-                event.currentTarget.classList.remove("buy");
-                event.currentTarget.classList.remove("is-primary");
-                event.currentTarget.classList.add("is-success");
-                event.currentTarget.innerHTML = "Owned";
+                button.classList.remove("buy");
+                button.classList.remove("is-primary");
+                button.classList.add("is-success");
+                button.innerHTML = "Owned";
             } else {
                 // Increment amount owned
                 item["count"] += 1;
-                event.currentTarget.children[1].innerHTML = ") (Owned: " + item["count"];
+                document.getElementById("Owned " + button.id).innerHTML = item["count"];
             }
 
             $.post('/buy', {

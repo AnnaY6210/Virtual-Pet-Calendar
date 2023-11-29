@@ -23,14 +23,28 @@
           <div class="content">
             {{ item["description"]}}
             {% if item["rebuyable"] %}
-            (x{{ item["count"] }})
+            (x<span id="Count {{ 6*row+col }}">{{ item["count"] }}</span>)
             {% endif %}
           </div>
         </div>
         <footer class="card-footer is-centered">
-          <button id="{{ 6*row+col }}" class="button is-primary card-footer-item test">
-            Button
+          {% if item["rebuyable"] and item["count"] > 0 %}
+          <button id="{{ 6*row+col }}" class="button is-primary card-footer-item consumable">
+            Use
           </button>
+          {% elif item["rebuyable"] %}
+          <button id="{{ 6*row+col }}" class="button is-danger card-footer-item consumable" disabled>
+            None left
+          </button>
+          {% elif item["equip"] %}
+          <button id="{{ 6*row+col }}" class="button is-success card-footer-item equipable" disabled>
+            Displayed
+          </button>
+          {% else %}
+          <button id="{{ 6*row+col }}" class="button is-primary card-footer-item equipable">
+            Display
+          </button>
+          {% endif %}
         </footer>
       </div>
     </div>
@@ -42,7 +56,6 @@
 <script type="text/javascript">
   // Allow list of items to be used in javascript file
   var items = {{ items|tojson }};
-  var balance = {{ balance }};
 </script>
 <script src="../static/inventory.js"></script>
 

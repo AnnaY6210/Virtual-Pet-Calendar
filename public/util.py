@@ -110,7 +110,29 @@ def get_user_items(db, user_id):
 def get_pet_info(db):
     return db.child("pets").get().val()
 
-def get_user_pets_list(db, user_id, token):
+def get_user_pets(db, user_id):
+    return db.child("users").child(user_id).child("pets").get().val()
+
+def get_item_info_list(db, user_id, item_ids):
+    user_pet_info = get_user_pets(db, user_id)
+    pet_info = get_pet_info(db)
+    item_data = get_shop_items(db)
+    item_count = get_user_items(db, user_id)
+    items = []
+    for id, item in item_data.items():
+        if (id in item_ids):
+            item["id"] = id
+            item["count"] = item_count.get(id, 0)
+            # Add pet related attributes if owned pet (only used in inventory)
+            if (id in user_pet_info.keys()):
+                item["health"] = user_pet_info[id]["health"]
+                item["equip"] = user_pet_info[id]["equip"]
+                item["spritesheet"] = pet_info[id]["image"]
+            
+            items.append(item)
+    return items
+
+def get_user_pets_list(db, user_id):
     user_pets = db.child("users").child(user_id).child("pets").get().val()
     if (not user_pets):
         user_pets = {}
