@@ -124,7 +124,7 @@ def calendar():
                             prev_claim = prev_claim_date.strftime("%D"),
                             claimable_money = claimable_money,
                             pets=pets,
-                            person=session["person"],)
+                            person=session["person"])
       
 
 @app.route("/claim_tasks")
@@ -171,23 +171,54 @@ def inventory():
     if credentials.access_token_expired:
         return redirect(url_for("oauth2callback"))
     
-    # gets users pet
     pets = util.get_user_pets_list(db, session["person"]["uid"])
     current_balance = util.get_balance(db, session["person"]["uid"])
-    item_data = util.get_shop_items(db)
     item_count = util.get_user_items(db,session["person"]["uid"])
-    items = []
-    for id, item in item_data.items():
-        if (id in item_count.keys()):
-            item["id"] = id
-            item["count"] = item_count[id]
-            items.append(item)
+
+    items = util.get_item_info_list(db, session["person"]["uid"], item_count.keys())
     items.sort(key=itemgetter("count"), reverse=True)
     return render_template(
-        "inventory.html", pets=pets, item_count=item_count, balance=current_balance,
+        "inventory.html", pets=pets, balance=current_balance,
         items=items, zip=zip, person=session["person"]
     )
 
+@app.route("/use_item", methods=["POST"])
+def use_item():
+    if "person" not in session or not session["person"]["is_logged_in"]:
+        return redirect(url_for("login"))
+    if "credentials" not in session:
+        return redirect(url_for("oauth2callback"))
+    credentials = client.OAuth2Credentials.from_json(session["credentials"])
+    if credentials.access_token_expired:
+        return redirect(url_for("oauth2callback"))
+    
+    type = request.form["type"]
+    id = request.form["id"]
+    user_pets = util.get_user_pets(db, session["person"]["uid"])
+
+    if (type == "equip"):
+        # Unequip current equipped pet
+        for pet_id in user_pets.keys():
+            db.child("users").child(session["person"]["uid"]).child("pets").child(pet_id).update({
+                "equip": False
+            })
+        
+        db.child("users").child(session["person"]["uid"]).child("pets").child(id).update({
+            "equip": True
+        })
+    elif (type == "consume"):
+        item_count = util.get_user_items(db, session["person"]["uid"])
+        # Find equipped pet the increase its health
+        for pet_id, pet in user_pets.items():
+            if (pet["equip"]):
+                db.child("users").child(session["person"]["uid"]).child("pets").child(pet_id).update({
+                    "health": pet["health"] + 10
+                })
+        
+        db.child("users").child(session["person"]["uid"]).child("items").update({
+            id: item_count[id] - 1
+        })
+    return redirect(url_for("inventory"))
 
 @app.route("/shop")
 def shop():
@@ -199,17 +230,16 @@ def shop():
     if credentials.access_token_expired:
         return redirect(url_for("oauth2callback"))
     
+    pets = util.get_user_pets_list(db, session["person"]["uid"])
     current_balance = util.get_balance(db, session["person"]["uid"])
     item_data = util.get_shop_items(db)
-    item_count = util.get_user_items(db,session["person"]["uid"])
-    items = []
-    pets = util.get_user_pets_list(db, session["person"]["uid"])
-    for id, item in item_data.items():
-        item["id"] = id
-        item["count"] = item_count.get(id, 0)
-        items.append(item)
+
+    items = util.get_item_info_list(db, session["person"]["uid"], item_data.keys())
     items.sort(key=itemgetter("price"))
-    return render_template("shop.html", pets=pets, balance = current_balance, items=items, zip=zip, person=session["person"],)
+    return render_template(
+        "shop.html", pets=pets, balance=current_balance,
+        items=items, zip=zip, person=session["person"]
+    )
 
 
 
@@ -226,7 +256,6 @@ def buy():
     
     spent = int(request.form["price"])
     id = request.form["id"]
-    print(db.child("users").child(session["person"]["uid"]).get().val())
     current_balance = db.child("users").child(session["person"]["uid"]).get().val()["balance"]
     item_count = util.get_user_items(db,session["person"]["uid"])
     pet_info = util.get_pet_info(db)
@@ -237,7 +266,7 @@ def buy():
             db.child("users").child(session["person"]["uid"]).child("pets").child(id).update({
                 "health": 100,
                 "equip": False,
-                "last_time": datetime.datetime.now()
+                "last_time": datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S.%f")
             })
         db.child("users").child(session["person"]["uid"]).child("items").update({id: item_count.get(id, 0) + 1})
     return redirect(url_for("shop"))
