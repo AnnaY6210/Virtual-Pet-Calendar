@@ -266,7 +266,7 @@ def buy():
             db.child("users").child(session["person"]["uid"]).child("pets").child(id).update({
                 "health": 100,
                 "equip": False,
-                "last_time": datetime.datetime.now()
+                "last_time": datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S.%f")
             })
         db.child("users").child(session["person"]["uid"]).child("items").update({id: item_count.get(id, 0) + 1})
     return redirect(url_for("shop"))
