@@ -276,7 +276,7 @@ def buy():
     pet_info = util.get_pet_info(db)
     # Update balance and item count
     if current_balance >= spent:
-        db.child("users").child(session["person"]["uid"]).update({"balance": current_balance - spent}, session["person"]["token"], session["person"]["token"])
+        db.child("users").child(session["person"]["uid"]).update({"balance": current_balance - spent}, session["person"]["token"])
         if id in pet_info.keys():
             db.child("users").child(session["person"]["uid"]).child("pets").child(id).update({
                 "health": 100,
@@ -365,7 +365,7 @@ def register():
                 # Get the name of the user
                 "name": name,
                 "prev_claim": current_day,
-                "balance": 0,
+                "balance": 100,
             }
             # Append data to the firebase realtime database
             data = {

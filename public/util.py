@@ -111,7 +111,10 @@ def get_pet_info(db):
     return db.child("pets").get().val()
 
 def get_user_pets(db, user_id):
-    return db.child("users").child(user_id).child("pets").get().val()
+    pets = db.child("users").child(user_id).child("pets").get().val()
+    if not pets:
+        pets = {}
+    return pets
 
 def get_item_info_list(db, user_id, item_ids):
     user_pet_info = get_user_pets(db, user_id)

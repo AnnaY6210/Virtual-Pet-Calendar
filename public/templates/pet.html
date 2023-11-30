@@ -26,28 +26,37 @@
 
   @keyframes moveSpritesheet {
     from {
-      transform: translate3d(0px, 0, 0);
+        transform: translate3d(0px, 0, 0);
     }
     to {
-      transform: translate3d(-100%, 0, 0);
+        transform: translate3d(-100%, 0, 0);
     }
   }
 </style>
 <div class="box mt-2 sticky">
+    {% set displayed = namespace(num_pets = 0) %}
     {% for pet in pets %}
-        {% if pet["equip"] %}
-            {% if pet['health'] == 0 %}
-                <div class="dead_pet">
-                    <img class="pixelart" src="static/img/grave.png" alt="grave">
-                </div>
-            {% else %}
-                <div class="pet">
-                    <img id="pet" class="pet_spritesheet pixelart" src="{{ pet['image'] }}" alt="pet">
-                </div>
-            {% endif %}
-        <progress id="health" class="progress is-success" value="{{ pet['health'] }}" max="100">{{pet['health']}}%</progress>
+      {% if pet["equip"] %}
+        {% set displayed.num_pets = displayed.num_pets + 1 %}
+        {% if pet['health'] == 0 %}
+          <div class="dead_pet">
+            <img class="pixelart" src="static/img/grave.png" alt="grave">
+          </div>
+        {% else %}
+          <div class="pet">
+            <img id="pet" class="pet_spritesheet pixelart" src="{{ pet['image'] }}" alt="pet">
+          </div>
         {% endif %}
+      <progress id="health" class="progress is-success" value="{{ pet['health'] }}" max="100">{{pet['health']}}%</progress>
+      {% endif %}
     {% endfor %}
+    <!-- Generate Blank Pet Component if no pets equipped -->
+    {% if displayed.num_pets == 0 %}
+      <div class="pet">
+        <img id="pet" class="pet_spritesheet pixelart" src="" alt="pet">
+      </div>
+      <progress id="health" class="progress is-success" value="0" max="100"></progress>
+    {% endif %}
 </div>
 
 <script type="text/javascript">
