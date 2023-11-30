@@ -4,26 +4,6 @@
   <div class="tile is-parent">
     <div class="tile is-child box">
       <div class="section">
-        <div class="block">
-          <h1 class="title is-1">Events</h1>
-        </div>
-        {% for date, events in dates.items() %}
-        <h1 class="subtitle">{{ date }}</h1>
-        <div class="columns">
-          {% for event in events %}
-          <div class="column is-2">
-            <article class="message is-info">
-              <div class="message-header">
-                <p>{{ event[0] }}</p>
-              </div>
-              <div class="message-body">
-                {{ event[1] }} - {{ event[2] }}
-              </div>
-            </article>
-          </div>
-          {% endfor %}
-        </div>
-        {% endfor %}
       
         <div class="block">
           <h1 class="title is-1">

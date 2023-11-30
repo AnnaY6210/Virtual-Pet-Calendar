@@ -75,38 +75,9 @@ def calendar():
     pets = util.get_user_pets_list(db, session["person"]["uid"], session["person"]["token"])
 
     http_auth = credentials.authorize(httplib2.Http())
-    service = discovery.build("calendar", "v3", http=http_auth)
-
-    now = datetime.datetime.utcnow().isoformat() + "Z"
-
-    # Retrieve events
-    events_result = (
-        service.events()
-        .list(
-            calendarId="primary",
-            timeMin=now,
-            # timeMax=end_time,
-            maxResults=10,
-            singleEvents=True,
-            orderBy="startTime",
-        )
-        .execute()
-    )
-
-    events = events_result.get("items", [])
-
-    # Dict of dates to a list of events for that date
-    dates = {}
-
-    if not events:
-        print("No events found")
-    else:
-        # print(f"Events for {target_date.date()}:")
-        print("Events")
-        dates = util.format_events(events)
-
-    # Get values for page display components
     service = discovery.build("tasks", "v1", http=http_auth)
+    # Get values for page display components
+    
     results = service.tasklists().list().execute()
     tasklists = results.get("items", [])
     prev_claim_str = util.get_prev_claim(db, session["person"]["uid"])
@@ -122,7 +93,6 @@ def calendar():
     items.sort(key=itemgetter("count"), reverse=True)
         
     return render_template("calendar.html",
-                            dates=dates, 
                             tasks_dates=dict(sorted(tasks_dates.items(), reverse = True)), 
                             balance = current_balance,
                             prev_claim = prev_claim_date.strftime("%D"),
@@ -162,11 +132,11 @@ def claim_tasks():
         money_gained += util.calculate_money(service, task_list, currency_per_task, prev_claim)
         
     # Update values for current user
+    tomorrow = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) + + datetime.timedelta(days=1)
     if money_gained > 0:
         db.child("users").child(session["person"]["uid"]).update({"balance": current_balance + money_gained}, session["person"]["token"])
         db.child("users").child(session["person"]["uid"]).update({"prev_claim": tomorrow.isoformat()}, session["person"]["token"])
-    
-    tomorrow = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) + + datetime.timedelta(days=1)
+        
     return jsonify(balance=current_balance + money_gained,
                    prev_claim=tomorrow.strftime("%D"))
 
