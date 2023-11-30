@@ -27,6 +27,7 @@ person = {"is_logged_in": False, "name": "", "email": "", "uid": ""}
 
 @app.route("/")
 def index():
+    # Perform redirects for login or to refresh oauth token
     if "person" not in session or not session["person"]["is_logged_in"]:
         return redirect(url_for("login"))
     if "credentials" not in session:
@@ -35,9 +36,7 @@ def index():
     if credentials.access_token_expired:
         return redirect(url_for("oauth2callback"))
 
-    # gets pet for this page 
-    pets = util.get_user_pets_list(db, session["person"]["uid"])
-    return render_template("index.html", pets=pets, person=session["person"])
+    return redirect(url_for("calendar"))
 
     
 TASK_SCOPE = "https://www.googleapis.com/auth/tasks"
@@ -64,6 +63,7 @@ def oauth2callback():
 
 @app.route("/calendar")
 def calendar():
+    # Perform redirects for login or to refresh oauth token
     if "person" not in session or not session["person"]["is_logged_in"]:
         return redirect(url_for("login"))
     if "credentials" not in session:
@@ -72,7 +72,7 @@ def calendar():
     if credentials.access_token_expired:
         return redirect(url_for("oauth2callback"))
     # gets user pet for this page
-    pets = util.get_user_pets_list(db, session["person"]["uid"])
+    pets = util.get_user_pets_list(db, session["person"]["uid"], session["person"]["token"])
 
     http_auth = credentials.authorize(httplib2.Http())
     service = discovery.build("calendar", "v3", http=http_auth)
@@ -105,17 +105,21 @@ def calendar():
         print("Events")
         dates = util.format_events(events)
 
-    # Task variables
+    # Get values for page display components
     service = discovery.build("tasks", "v1", http=http_auth)
     results = service.tasklists().list().execute()
     tasklists = results.get("items", [])
     prev_claim_str = util.get_prev_claim(db, session["person"]["uid"])
     prev_claim_date = datetime.datetime.fromisoformat(prev_claim_str)
-    claimable_money = 0
     current_balance = util.get_balance(db, session["person"]["uid"])
 
     # Parse tasks in each of the user's tasklists
     tasks_dates, claimable_money = util.format_tasks(tasklists, service, prev_claim_str)
+
+    # Get items for inventory display component
+    item_count = util.get_user_items(db,session["person"]["uid"])
+    items = util.get_item_info_list(db, session["person"]["uid"], item_count.keys())
+    items.sort(key=itemgetter("count"), reverse=True)
         
     return render_template("calendar.html",
                             dates=dates, 
@@ -124,11 +128,14 @@ def calendar():
                             prev_claim = prev_claim_date.strftime("%D"),
                             claimable_money = claimable_money,
                             pets=pets,
-                            person=session["person"])
+                            person=session["person"],
+                            items = items,
+                            zip=zip)
       
 
 @app.route("/claim_tasks")
 def claim_tasks():
+    # Perform redirects for login or to refresh oauth token
     if "person" not in session or not session["person"]["is_logged_in"]:
         return redirect(url_for("login"))
     if "credentials" not in session:
@@ -141,28 +148,33 @@ def claim_tasks():
     service = discovery.build("tasks", "v1", http=http_auth)
     results = service.tasklists().list().execute()
     tasklists = results.get("items", [])
-    current_day = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    money_gained = 0
+    
+    
     current_balance = util.get_balance(db, session["person"]["uid"])
     prev_claim = util.get_prev_claim(db, session["person"]["uid"])
 
     # Calculate money gained for task completions
+    money_gained = 0
     for task_list in tasklists:
-        currency_per_task = 10
+        currency_per_task = util.DEFAULT_REWARD
         if task_list["title"].split()[-1].isdigit():
             currency_per_task = int(task_list["title"].split()[-1])
         money_gained += util.calculate_money(service, task_list, currency_per_task, prev_claim)
         
     # Update values for current user
-    db.child("users").child(session["person"]["uid"]).update({"balance": current_balance + money_gained})
-    db.child("users").child(session["person"]["uid"]).update({"prev_claim": current_day.isoformat()})
+    if money_gained > 0:
+        db.child("users").child(session["person"]["uid"]).update({"balance": current_balance + money_gained}, session["person"]["token"])
+        db.child("users").child(session["person"]["uid"]).update({"prev_claim": tomorrow.isoformat()}, session["person"]["token"])
+    
+    tomorrow = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) + + datetime.timedelta(days=1)
     return jsonify(balance=current_balance + money_gained,
-                   prev_claim=current_day.strftime("%D"))
+                   prev_claim=tomorrow.strftime("%D"))
 
 
 
 @app.route("/inv")
 def inventory():
+    # Perform redirects for login or to refresh oauth token
     if "person" not in session or not session["person"]["is_logged_in"]:
         return redirect(url_for("login"))
     if "credentials" not in session:
@@ -171,7 +183,8 @@ def inventory():
     if credentials.access_token_expired:
         return redirect(url_for("oauth2callback"))
     
-    pets = util.get_user_pets_list(db, session["person"]["uid"])
+    # gets users pet
+    pets = util.get_user_pets_list(db, session["person"]["uid"], session["person"]["token"])
     current_balance = util.get_balance(db, session["person"]["uid"])
     item_count = util.get_user_items(db,session["person"]["uid"])
 
@@ -222,6 +235,7 @@ def use_item():
 
 @app.route("/shop")
 def shop():
+    # Perform redirects for login or to refresh oauth token
     if "person" not in session or not session["person"]["is_logged_in"]:
         return redirect(url_for("login"))
     if "credentials" not in session:
@@ -230,7 +244,7 @@ def shop():
     if credentials.access_token_expired:
         return redirect(url_for("oauth2callback"))
     
-    pets = util.get_user_pets_list(db, session["person"]["uid"])
+    pets = util.get_user_pets_list(db, session["person"]["uid"], session["person"]["token"])
     current_balance = util.get_balance(db, session["person"]["uid"])
     item_data = util.get_shop_items(db)
 
@@ -246,6 +260,7 @@ def shop():
 # Redirected here when a buy button is clicked
 @app.route("/buy", methods=["POST"])
 def buy():
+    # Perform redirects for login or to refresh oauth token
     if "person" not in session or not session["person"]["is_logged_in"]:
         return redirect(url_for("login"))
     if "credentials" not in session:
@@ -261,20 +276,26 @@ def buy():
     pet_info = util.get_pet_info(db)
     # Update balance and item count
     if current_balance >= spent:
-        db.child("users").child(session["person"]["uid"]).update({"balance": current_balance - spent})
+        db.child("users").child(session["person"]["uid"]).update({"balance": current_balance - spent}, session["person"]["token"])
         if id in pet_info.keys():
             db.child("users").child(session["person"]["uid"]).child("pets").child(id).update({
                 "health": 100,
                 "equip": False,
                 "last_time": datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S.%f")
-            })
-        db.child("users").child(session["person"]["uid"]).child("items").update({id: item_count.get(id, 0) + 1})
+            }, session["person"]["token"])
+        db.child("users").child(session["person"]["uid"]).child("items").update({id: item_count.get(id, 0) + 1}, session["person"]["token"])
     return redirect(url_for("shop"))
 
 
 @app.route("/login")
 def login():
     return render_template("login.html")
+
+@app.route("/logout")
+def logout():
+    if session:
+        session.clear()
+    return redirect(url_for("login"))
 
 
 # If someone clicks on login, they are redirected to /result
@@ -291,13 +312,11 @@ def result():
             session["person"] = {
                 "is_logged_in": True,
                 "email": user["email"],
+                "token": user["idToken"],
                 "uid": user["localId"],
                 # Get the name of the user
                 "name": db.child("users").child(user["localId"]).get().val()["name"],
-                "prev_claim": db.child("users")
-                .child(user["localId"])
-                .get()
-                .val()["prev_claim"],
+                "prev_claim": util.get_prev_claim(db, user["localId"]),
                 "balance": db.child("users")
                 .child(user["localId"])
                 .get()
@@ -342,10 +361,11 @@ def register():
                 "is_logged_in": True,
                 "email": user["email"],
                 "uid": user["localId"],
+                "token": user["idToken"],
                 # Get the name of the user
                 "name": name,
                 "prev_claim": current_day,
-                "balance": 0,
+                "balance": 100,
             }
             # Append data to the firebase realtime database
             data = {
@@ -355,7 +375,7 @@ def register():
                 "balance": session["person"]["balance"],
             }
 
-            db.child("users").child(session["person"]["uid"]).set(data)
+            db.child("users").child(session["person"]["uid"]).set(data, session["person"]["token"])
             # Go to welcome page
             return redirect(url_for("index"))
         except:

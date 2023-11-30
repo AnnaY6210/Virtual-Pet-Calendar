@@ -1,8 +1,6 @@
-import os, flask, sys, httplib2, datetime, pyrebase
-from flask import Flask, request, jsonify, redirect, url_for, render_template, session
-from oauth2client import client
+import datetime
+DEFAULT_REWARD = 5
 
-    
 def format_events(events):
     dates = {}
     for event in events:
@@ -26,12 +24,12 @@ def format_events(events):
 
 def format_tasks(tasklists, service, prev_claim_str):
     claimable_money = 0
-    current_day = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0))
+    tomorrow = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)) + datetime.timedelta(days=1)
     formatted_tasks = {}
     for task_list in tasklists:
         # Add the claimable currency of the tasklist to the total
         # Tasks have their reward defined by the positive integer after their title after a bar ("|")
-        currency_per_task = 10
+        currency_per_task = DEFAULT_REWARD
         suffix = task_list["title"].split("|")[-1].strip()
         if suffix.isdigit():
             currency_per_task = int(suffix)
@@ -42,7 +40,7 @@ def format_tasks(tasklists, service, prev_claim_str):
             service.tasks()
             .list(
                 tasklist=task_list["id"],
-                dueMax=current_day.isoformat() + "Z",
+                dueMax=tomorrow.isoformat() + "Z",
                 maxResults=40,
                 showHidden=True,
             )
@@ -73,14 +71,14 @@ def format_tasks(tasklists, service, prev_claim_str):
 
 # Function for calculating the currency reward for a given tasklist
 def calculate_money(service, tasklist, currency_per_task, prev_claim):
-    current_day = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)).isoformat()
+    tomorrow = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) + datetime.timedelta(days=1)).isoformat()
     total = 0
     past_completed_tasks = (
             service.tasks()
             .list(
                 tasklist=tasklist["id"],
                 dueMin=prev_claim + "Z",
-                dueMax=current_day + "Z",
+                dueMax=tomorrow + "Z",
                 showHidden=True,
             )
             .execute()
@@ -113,7 +111,10 @@ def get_pet_info(db):
     return db.child("pets").get().val()
 
 def get_user_pets(db, user_id):
-    return db.child("users").child(user_id).child("pets").get().val()
+    pets = db.child("users").child(user_id).child("pets").get().val()
+    if not pets:
+        pets = {}
+    return pets
 
 def get_item_info_list(db, user_id, item_ids):
     user_pet_info = get_user_pets(db, user_id)
@@ -134,7 +135,7 @@ def get_item_info_list(db, user_id, item_ids):
             items.append(item)
     return items
 
-def get_user_pets_list(db, user_id):
+def get_user_pets_list(db, user_id, token):
     user_pets = db.child("users").child(user_id).child("pets").get().val()
     if (not user_pets):
         user_pets = {}
@@ -144,7 +145,7 @@ def get_user_pets_list(db, user_id):
         time_now = datetime.datetime.now()
         time_now_string = time_now.strftime("%m/%d/%Y, %H:%M:%S.%f")
         if "last_time" not in item.keys():
-            db.child("users").child(user_id).child("pets").child(id).update({"last_time": time_now_string})
+            db.child("users").child(user_id).child("pets").child(id).update({"last_time": time_now_string}, token)
             time_then = time_now
         else:
             time_then = datetime.datetime.strptime(item["last_time"], "%m/%d/%Y, %H:%M:%S.%f")
@@ -158,12 +159,12 @@ def get_user_pets_list(db, user_id):
             if item["health"] > 0:
                 pet["health"] = item["health"] - (delta.days * 10)
                 db.child("users").child(user_id).child("pets").child(id).update({"health": pet["health"], 
-                                                                                 "last_time": time_now_string})
+                                                                                 "last_time": time_now_string}, token)
             else:
                 pet["health"] = item["health"]
         else:
             pet["health"] = item["health"]
             new_time = (time_then + delta).strftime("%m/%d/%Y, %H:%M:%S.%f")
-            db.child("users").child(user_id).child("pets").child(id).update({"last_time": new_time})
+            db.child("users").child(user_id).child("pets").child(id).update({"last_time": new_time}, token)
         pets.append(pet)
     return pets
