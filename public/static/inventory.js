@@ -16,7 +16,18 @@ function equip(item, button) {
     button.classList.add("is-success");
     button.disabled = true;
     button.innerHTML = "Displayed";
-    document.getElementById("pet").src = item["spritesheet"];
+    // Display pet if not dead, grave otherwise
+    pet = document.getElementById("pet");
+    if (item["health"] > 0) {
+        pet.src = item["spritesheet"];
+        pet.classList.add("pet_spritesheet");
+        pet.alt = "pet";
+    } else {
+        pet.src = "static/img/grave.png";
+        pet.classList.remove("pet_spritesheet");
+        pet.alt = "grave";
+    }
+    
     document.getElementById("health").value = item["health"];
 }
 
@@ -24,20 +35,23 @@ function equip(item, button) {
 function consume(item, button, amount) {
     // Fail if at full health    
     if (document.getElementById("health").value >= 100) {
-            alert("This won't have any effect");
-            return false;
-        }
-        // Add health and remove item
-        document.getElementById("health").value += 10;
-        item["count"] -= 1;
-        amount.innerHTML = item["count"];
-        // Change button if now out of that item
-        if (item["count"] <= 0) {
-            button.classList.remove("is-primary");
-            button.classList.add("is-danger");
-            button.innerHTML = "None left";
-            button.disabled = true;
-        }
+        alert("This won't have any effect");
+        return false;
+    } else if (document.getElementById("health").value <= 0) {
+        alert("You can't feed a deat pet!");
+        return false;
+    }
+    // Add health and remove item
+    document.getElementById("health").value += 10;
+    item["count"] -= 1;
+    amount.innerHTML = item["count"];
+    // Change button if now out of that item
+    if (item["count"] <= 0) {
+        button.classList.remove("is-primary");
+        button.classList.add("is-danger");
+        button.innerHTML = "None left";
+        button.disabled = true;
+    }
     
     return true;
 }
