@@ -40,7 +40,7 @@
         {% set displayed.num_pets = displayed.num_pets + 1 %}
         {% if pet['health'] == 0 %}
           <div class="dead_pet">
-            <img class="pixelart" src="static/img/grave.png" alt="grave">
+            <img id="pet" class="pixelart" src="static/img/grave.png" alt="grave">
           </div>
         {% else %}
           <div class="pet">
