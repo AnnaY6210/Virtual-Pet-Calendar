@@ -157,7 +157,7 @@ def get_user_pets_list(db, user_id, token):
         pet["image"] = pet_info[id]["image"]
         if item["equip"] is True:
             if item["health"] > 0:
-                pet["health"] = item["health"] - (delta.days * 10)
+                pet["health"] = max(0, item["health"] - (delta.days * 10))
                 db.child("users").child(user_id).child("pets").child(id).update({"health": pet["health"], 
                                                                                  "last_time": time_now_string}, token)
             else:
