@@ -3,7 +3,7 @@ $(document).on('click', ".claimtasks",function(e){
     $.getJSON('/claim_tasks',
         function(data) {
             document.getElementsByClassName("claimtasks")[0].innerHTML = "Claim 0G [Last Claimed: " + data["prev_claim"] + "]";
-            document.getElementsByClassName("currency-counter")[0].innerHTML = "<img src='/static/img/money_bag.png'/>" + data["balance"];
+            document.getElementById("balance").innerHTML = String(data["balance"]);
     });
     
     return false;

@@ -1,5 +1,3 @@
-{% extends "index.html" %} {% block content %}
- 
 <div class="tile is-ancestor">
   <div class="tile is-parent">
     <div class="tile is-child box">
@@ -42,4 +40,3 @@
 {% include "calendar_tutorial.html" %} 
 <script src="{{url_for('static', filename='calendar.js')}}"></script>
 <script src="{{url_for('static', filename='inventory.js')}}"></script>
-{% endblock %}
