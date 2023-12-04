@@ -1,4 +1,4 @@
-import os, flask, sys, httplib2, datetime, pyrebase
+import os, httplib2, datetime, pyrebase
 import util
 from flask import Flask, request, jsonify, redirect, url_for, render_template, session
 from oauth2client import client
@@ -38,16 +38,15 @@ def index():
 
     return redirect(url_for("calendar"))
 
-    
+
 TASK_SCOPE = "https://www.googleapis.com/auth/tasks"
-CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar"   
 
 # Begin oauth callback route
 @app.route("/oauth2callback")
 def oauth2callback():
     flow = client.flow_from_clientsecrets(
         "../client_secrets.json",
-        scope=[TASK_SCOPE,CALENDAR_SCOPE],
+        scope=[TASK_SCOPE],
         redirect_uri=url_for("oauth2callback", _external=True),
     )
     if "code" not in request.args:
@@ -71,29 +70,33 @@ def calendar():
     credentials = client.OAuth2Credentials.from_json(session["credentials"])
     if credentials.access_token_expired:
         return redirect(url_for("oauth2callback"))
+    user_id = session["person"]["uid"]
     # gets user pet for this page
-    pets = util.get_user_pets_list(db, session["person"]["uid"], session["person"]["token"])
-
+    pets = util.get_user_pets_list(db, user_id, session["person"]["token"])
     http_auth = credentials.authorize(httplib2.Http())
     service = discovery.build("tasks", "v1", http=http_auth)
+
     # Get values for page display components
-    
+
     results = service.tasklists().list().execute()
     tasklists = results.get("items", [])
-    prev_claim_str = util.get_prev_claim(db, session["person"]["uid"])
+    prev_claim_str = util.get_prev_claim(db, user_id)
     prev_claim_date = datetime.datetime.fromisoformat(prev_claim_str)
-    current_balance = util.get_balance(db, session["person"]["uid"])
+    current_balance = util.get_balance(db, user_id)
 
     # Parse tasks in each of the user's tasklists
-    tasks_dates, claimable_money = util.format_tasks(tasklists, service, prev_claim_str)
+    tasks_dates, claimable_money = util.format_tasks(tasklists,
+                                                    service,
+                                                    prev_claim_str)
+    tasks_dates=dict(sorted(tasks_dates.items(), reverse = True))
 
     # Get items for inventory display component
-    item_count = util.get_user_items(db,session["person"]["uid"])
-    items = util.get_item_info_list(db, session["person"]["uid"], item_count.keys())
+    item_count = util.get_user_items(db, user_id)
+    items = util.get_item_info_list(db, user_id, item_count.keys())
     items.sort(key=itemgetter("count"), reverse=True)
-        
+
     return render_template("calendar.html",
-                            tasks_dates=dict(sorted(tasks_dates.items(), reverse = True)), 
+                            tasks_dates=tasks_dates,
                             balance = current_balance,
                             prev_claim = prev_claim_date.strftime("%D"),
                             claimable_money = claimable_money,
@@ -101,7 +104,7 @@ def calendar():
                             person=session["person"],
                             items = items,
                             zip=zip)
-      
+
 
 @app.route("/claim_tasks")
 def claim_tasks():
@@ -113,15 +116,16 @@ def claim_tasks():
     credentials = client.OAuth2Credentials.from_json(session["credentials"])
     if credentials.access_token_expired:
         return redirect(url_for("oauth2callback"))
-    
+    user_id = session["person"]["uid"]
+
     http_auth = credentials.authorize(httplib2.Http())
     service = discovery.build("tasks", "v1", http=http_auth)
     results = service.tasklists().list().execute()
     tasklists = results.get("items", [])
-    
-    
-    current_balance = util.get_balance(db, session["person"]["uid"])
-    prev_claim = util.get_prev_claim(db, session["person"]["uid"])
+
+
+    current_balance = util.get_balance(db, user_id)
+    prev_claim = util.get_prev_claim(db, user_id)
 
     # Calculate money gained for task completions
     money_gained = 0
@@ -129,14 +133,21 @@ def claim_tasks():
         currency_per_task = util.DEFAULT_REWARD
         if task_list["title"].split()[-1].isdigit():
             currency_per_task = int(task_list["title"].split()[-1])
-        money_gained += util.calculate_money(service, task_list, currency_per_task, prev_claim)
-        
+        money_gained += util.calculate_money(service,
+                                            task_list,
+                                            currency_per_task,
+                                            prev_claim)
+
     # Update values for current user
-    tomorrow = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) + + datetime.timedelta(days=1)
+    now = datetime.datetime.utcnow()
+    tomorrow = now.replace(hour=0,
+                           minute=0,
+                           second=0,
+                           microsecond=0) + datetime.timedelta(days=1)
     if money_gained > 0:
-        db.child("users").child(session["person"]["uid"]).update({"balance": current_balance + money_gained}, session["person"]["token"])
-        db.child("users").child(session["person"]["uid"]).update({"prev_claim": tomorrow.isoformat()}, session["person"]["token"])
-        
+        db.child("users").child(user_id).update({"balance": current_balance + money_gained}, session["person"]["token"])
+        db.child("users").child(user_id).update({"prev_claim": tomorrow.isoformat()}, session["person"]["token"])
+
     return jsonify(balance=current_balance + money_gained,
                    prev_claim=tomorrow.strftime("%D"))
 
@@ -152,13 +163,14 @@ def inventory():
     credentials = client.OAuth2Credentials.from_json(session["credentials"])
     if credentials.access_token_expired:
         return redirect(url_for("oauth2callback"))
-    
-    # gets users pet
-    pets = util.get_user_pets_list(db, session["person"]["uid"], session["person"]["token"])
-    current_balance = util.get_balance(db, session["person"]["uid"])
-    item_count = util.get_user_items(db,session["person"]["uid"])
+    user_id = session["person"]["uid"]
 
-    items = util.get_item_info_list(db, session["person"]["uid"], item_count.keys())
+    # gets users pet
+    pets = util.get_user_pets_list(db, user_id, session["person"]["token"])
+    current_balance = util.get_balance(db, user_id)
+    item_count = util.get_user_items(db,user_id)
+
+    items = util.get_item_info_list(db, user_id, item_count.keys())
     items.sort(key=itemgetter("count"), reverse=True)
     return render_template(
         "inventory.html", pets=pets, balance=current_balance,
@@ -174,32 +186,33 @@ def use_item():
     credentials = client.OAuth2Credentials.from_json(session["credentials"])
     if credentials.access_token_expired:
         return redirect(url_for("oauth2callback"))
-    
-    type = request.form["type"]
-    id = request.form["id"]
-    user_pets = util.get_user_pets(db, session["person"]["uid"])
+    user_id = session["person"]["uid"]
 
-    if (type == "equip"):
+    item_type = request.form["type"]
+    item_id = request.form["id"]
+    user_pets = util.get_user_pets(db, user_id)
+
+    if item_type == "equip":
         # Unequip current equipped pet
         for pet_id in user_pets.keys():
-            db.child("users").child(session["person"]["uid"]).child("pets").child(pet_id).update({
+            db.child("users").child(user_id).child("pets").child(pet_id).update({
                 "equip": False
             })
-        
-        db.child("users").child(session["person"]["uid"]).child("pets").child(id).update({
+
+        db.child("users").child(user_id).child("pets").child(item_id).update({
             "equip": True
         })
-    elif (type == "consume"):
-        item_count = util.get_user_items(db, session["person"]["uid"])
+    elif item_type == "consume":
+        item_count = util.get_user_items(db, user_id)
         # Find equipped pet the increase its health
         for pet_id, pet in user_pets.items():
-            if (pet["equip"]):
-                db.child("users").child(session["person"]["uid"]).child("pets").child(pet_id).update({
+            if pet["equip"]:
+                db.child("users").child(user_id).child("pets").child(pet_id).update({
                     "health": pet["health"] + 10
                 })
-        
-        db.child("users").child(session["person"]["uid"]).child("items").update({
-            id: item_count[id] - 1
+
+        db.child("users").child(user_id).child("items").update({
+            item_id: item_count[item_id] - 1
         })
     return redirect(url_for("inventory"))
 
@@ -213,12 +226,13 @@ def shop():
     credentials = client.OAuth2Credentials.from_json(session["credentials"])
     if credentials.access_token_expired:
         return redirect(url_for("oauth2callback"))
-    
-    pets = util.get_user_pets_list(db, session["person"]["uid"], session["person"]["token"])
-    current_balance = util.get_balance(db, session["person"]["uid"])
+    user_id = session["person"]["uid"]
+
+    pets = util.get_user_pets_list(db, user_id, session["person"]["token"])
+    current_balance = util.get_balance(db, user_id)
     item_data = util.get_shop_items(db)
 
-    items = util.get_item_info_list(db, session["person"]["uid"], item_data.keys())
+    items = util.get_item_info_list(db, user_id, item_data.keys())
     items.sort(key=itemgetter("price"))
     return render_template(
         "shop.html", pets=pets, balance=current_balance,
@@ -238,22 +252,24 @@ def buy():
     credentials = client.OAuth2Credentials.from_json(session["credentials"])
     if credentials.access_token_expired:
         return redirect(url_for("oauth2callback"))
-    
+    user_id = session["person"]["uid"]
+
     spent = int(request.form["price"])
-    id = request.form["id"]
-    current_balance = db.child("users").child(session["person"]["uid"]).get().val()["balance"]
-    item_count = util.get_user_items(db,session["person"]["uid"])
+    item_id = request.form["id"]
+    current_balance = db.child("users").child(user_id).get().val()["balance"]
+    item_count = util.get_user_items(db,user_id)
     pet_info = util.get_pet_info(db)
     # Update balance and item count
     if current_balance >= spent:
-        db.child("users").child(session["person"]["uid"]).update({"balance": current_balance - spent}, session["person"]["token"])
-        if id in pet_info.keys():
-            db.child("users").child(session["person"]["uid"]).child("pets").child(id).update({
+        db.child("users").child(user_id).update({"balance": current_balance - spent}, session["person"]["token"])
+        if item_id in pet_info.keys():
+            db.child("users").child(user_id).child("pets").child(item_id).update({
                 "health": 100,
                 "equip": False,
                 "last_time": datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S.%f")
             }, session["person"]["token"])
-        db.child("users").child(session["person"]["uid"]).child("items").update({id: item_count.get(id, 0) + 1}, session["person"]["token"])
+        print(item_id)
+        db.child("users").child(user_id).child("items").update({item_id: item_count.get(item_id, 0) + 1}, session["person"]["token"])
     return redirect(url_for("shop"))
 
 
@@ -357,9 +373,7 @@ def register():
             return redirect(url_for("index"))
         else:
             return redirect(url_for("signup"))
-        
-
 
 
 if __name__ == "__main__":
-    app.run(port=int(os.environ.get("PORT", 8080)),host='0.0.0.0',debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
