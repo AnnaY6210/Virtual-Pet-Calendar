@@ -1,42 +1,67 @@
-<div class="tile is-ancestor">
-  <div class="tile is-parent">
-    <div class="tile is-child box">
-      <div class="section">
-      
-        <div class="block">
-          <h1 class="title is-1">
-            Task History
-            <i class="fas fa-info-circle tutorial-button"></i>
-          </h1>
-          <button class="button is-primary claimtasks">Claim {{claimable_money}}G [Last Claimed: {{prev_claim}}]</button>
-        </div>
-        {% for date, tasks in tasks_dates.items() %}
-        <h1 class="subtitle">{{ date }}</h1>
-        <div class="columns is-multiline">
-          {% for task in tasks %}
-          <div class="column is-2">
-            <article class="message is-info">
-              <div class="message-header">
-                <p>{{ task[0] }}</p>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script
+      src="https://kit.fontawesome.com/e94596872f.js"
+      crossorigin="anonymous"
+    ></script>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css"
+    />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+    <title>Virtual Pet Calendar</title>
+  </head>
+  <body>
+    {% include "navbar.html" %} {% block content %} {% endblock %}
+    <script defer src="static/index.js"></script>
+
+    <br />
+    <br />
+    {% include "pet.html" %}
+    <div class="tile is-ancestor">
+      <div class="tile is-parent is-vertical">
+        <div class="tile is-child box">
+          <div class="section">
+            <div class="block">
+              <h1 class="title is-1">
+                Task History
+                <i class="fas fa-info-circle tutorial-button"></i>
+              </h1>
+              <button class="button is-primary claimtasks">
+                Claim {{claimable_money}}G [Last Claimed: {{prev_claim}}]
+              </button>
+            </div>
+            {% for date, tasks in tasks_dates.items() %}
+            <h1 class="subtitle">{{ date }}</h1>
+            <div class="columns is-multiline">
+              {% for task in tasks %}
+              <div class="column is-4">
+                <article class="message is-info">
+                  <div class="message-header">
+                    <p>{{ task[0] }}</p>
+                  </div>
+                  <div class="message-body">{{ task[1]|safe}}</div>
+                </article>
               </div>
-              <div class="message-body">
-                {{ task[1]|safe}}
-              </div>
-            </article>
+              {% endfor %}
+            </div>
+            {% endfor %}
           </div>
-          {% endfor %}
         </div>
-        {% endfor %}
-      
+      </div>
+      <div class="tile is-parent is-vertical">
+        <div class="tile is-child box">
+          {% include "inventory_homepage.html" %}
+        </div>
       </div>
     </div>
-  </div>
-  <div class="tile is-parent is-vertical">
-    <div class="tile is-child box">
-      {% include "inventory.html" %} 
-    </div>
-  </div>
-</div>
-{% include "calendar_tutorial.html" %} 
-<script src="{{url_for('static', filename='calendar.js')}}"></script>
-<script src="{{url_for('static', filename='inventory.js')}}"></script>
+    {% include "calendar_tutorial.html" %}
+    <script src="{{url_for('static', filename='calendar.js')}}"></script>
+    <script src="{{url_for('static', filename='inventory.js')}}"></script>
+  </body>
+</html>

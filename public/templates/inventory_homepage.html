@@ -1,0 +1,84 @@
+{% block content %}
+<div class="section">
+  <h1 class="title is-1">Inventory</h1>
+  <div class="column is-half">
+    <textarea
+      class="textarea has-fixed-size"
+      placeholder="Search"
+      rows="1"
+    ></textarea>
+  </div>
+  {% for row in range((items|length + 5) // 6) %}
+  <div class="columns">
+    {% for col, item in zip(range(6), items[6*row:6*row+6]) %}
+    <div
+      class="column is-three-quarters-mobile is-two-thirds-tablet is-half-desktop is-one-third-widescreen is-one-quarter-fullhd"
+    >
+      <div class="card">
+        <header class="card-header">
+          <p
+            class="card-header-title title is-three-quarters-mobile is-two-thirds-tablet is-half-desktop is-one-third-widescreen is-one-quarter-fullhd is-centered"
+          >
+            {{ item["name"] }}
+          </p>
+        </header>
+        <div class="card-image">
+          <figure class="image">
+            <img src="{{ item['image'] }}" />
+          </figure>
+        </div>
+        <div class="card-content">
+          <div class="content">
+            {{ item["description"]}} {% if item["rebuyable"] %} (x<span
+              id="Count {{ 6*row+col }}"
+              >{{ item["count"] }}</span
+            >) {% endif %}
+          </div>
+        </div>
+        <footer class="card-footer is-centered">
+          {% if item["rebuyable"] and item["count"] > 0 %}
+          <button
+            id="{{ 6*row+col }}"
+            class="button is-primary card-footer-item consumable"
+          >
+            Use
+          </button>
+          {% elif item["rebuyable"] %}
+          <button
+            id="{{ 6*row+col }}"
+            class="button is-danger card-footer-item consumable"
+            disabled
+          >
+            None left
+          </button>
+          {% elif item["equip"] %}
+          <button
+            id="{{ 6*row+col }}"
+            class="button is-success card-footer-item equipable"
+            disabled
+          >
+            Displayed
+          </button>
+          {% else %}
+          <button
+            id="{{ 6*row+col }}"
+            class="button is-primary card-footer-item equipable"
+          >
+            Display
+          </button>
+          {% endif %}
+        </footer>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+
+<script type="text/javascript">
+  // Allow list of items to be used in javascript file
+  var items = {{ items|tojson }};
+</script>
+<script src="../static/inventory.js"></script>
+
+{% endblock %}
