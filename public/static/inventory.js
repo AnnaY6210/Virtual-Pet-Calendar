@@ -33,7 +33,7 @@ function equip(item, button) {
 
 // Used for consumable items
 function consume(item, button, amount) {
-    // Fail if at full health    
+    // Fail if at full health
     if (document.getElementById("health").value >= 100) {
         alert("This won't have any effect");
         return false;

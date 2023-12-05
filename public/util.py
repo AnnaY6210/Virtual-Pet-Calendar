@@ -1,27 +1,6 @@
 import datetime
 DEFAULT_REWARD = 5
 
-def format_events(events):
-    dates = {}
-    for event in events:
-            start_time = event["start"].get("dateTime", event["start"].get("date"))
-            end_time = event["end"].get("dateTime", event["end"].get("date"))
-
-            # Convert start_time and end_time to datetime objects
-            start_datetime = datetime.datetime.fromisoformat(start_time)
-            end_datetime = datetime.datetime.fromisoformat(end_time)
-
-            # Format start_time and end_time in a standard format
-            start_formatted = start_datetime.strftime("%H:%M")
-            end_formatted = end_datetime.strftime("%H:%M")
-            date = start_datetime.strftime("%D")
-
-            # Add event info to proper date
-            if not dates.get(date):
-                dates[date] = []
-            dates[date].append([event["summary"], start_formatted, end_formatted])
-    return dates
-
 def format_tasks(tasklists, service, prev_claim_str):
     claimable_money = 0
     tomorrow = (datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)) + datetime.timedelta(days=1)
